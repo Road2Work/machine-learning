@@ -1,0 +1,25 @@
+.env
+__pycache__/
+*.keras
+*.pdf
+*.wav
+*.mp3
+.vscode/
+
+# Virtual Environment 
+venv/
+env/
+.venv/
+
+# Folder model Whisper
+_whisper/
+.cache/
+
+# File temporary & logs
+*.log
+logs/
+temp_*/
+
+# System files
+.DS_Store
+Thumbs.db
