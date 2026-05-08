@@ -66,7 +66,7 @@ if __name__ == "__main__":
     import json
     
     # Ini nama file audio dummy yang ada di komputermu untuk testing
-    file_audio_tes = "tes_suara.wav" 
+    file_audio_tes = "test_suara.ogg" # (Atau sesuaikan dengan nama file audio yang kamu punya) 
     
     print(f"\n[TESTING LOKAL] Menerima request file: {file_audio_tes}...")
     hasil_respon = proses_audio_ke_teks(file_audio_tes)
