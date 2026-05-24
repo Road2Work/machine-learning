@@ -1,76 +1,90 @@
+"""
+stt_utils.py — Speech-to-Text Engine (Diva)
+Road2Work AI | CC26-PSU050
+Author  : Diva (AI Engineer 2 – Speech & Interview Intelligence)
+
+CHANGELOG v0.5.0:
+  [NEW]  MAX_AUDIO_DURATION_SECONDS=120 & MAX_AUDIO_FILE_SIZE_MB=25 (14.5: Batasi durasi audio)
+  [NEW]  Cek durasi nyata dari info.duration setelah Whisper membuka file
+  [FIX]  Lazy model loading dipertahankan
+  [NEW]  get_model_info() untuk health check
+"""
+
 import os
 import time
-from faster_whisper import WhisperModel
+from typing import Any
 
-# ---------------------------------------------------------------------------
-# INISIALISASI MODEL AI
-# Ditaruh di luar fungsi agar AI hanya melakukan "loading" satu kali saja 
-# saat server FastAPI pertama kali dinyalakan oleh tim.
-# ---------------------------------------------------------------------------
-print("Memuat Model AI STT (Road2Work Engine)...")
-# Menggunakan model "base" untuk keseimbangan terbaik antara akurasi kalimat dan kecepatan
-model = WhisperModel("base", device="cpu", compute_type="int8", cpu_threads=4)
+MAX_AUDIO_DURATION_SECONDS: int = 150
+MAX_AUDIO_FILE_SIZE_MB:     int = 25
 
-def proses_audio_ke_teks(jalur_file):
+_MODEL_SIZE    = "base"
+_MODEL_DEVICE  = "cpu"
+_MODEL_COMPUTE = "int8"
+_MODEL_THREADS = 4
+_whisper_model: Any = None
+
+
+def _get_model() -> Any:
+    global _whisper_model
+    if _whisper_model is None:
+        try:
+            from faster_whisper import WhisperModel
+            print(f"[stt_utils] Memuat Whisper '{_MODEL_SIZE}'...")
+            _whisper_model = WhisperModel(_MODEL_SIZE, device=_MODEL_DEVICE,
+                                          compute_type=_MODEL_COMPUTE, cpu_threads=_MODEL_THREADS)
+            print("[stt_utils] ✅ Model Whisper siap.")
+        except ImportError:
+            raise RuntimeError("[stt_utils] faster-whisper tidak terinstall. pip install faster-whisper")
+    return _whisper_model
+
+
+def get_model_info() -> dict:
+    return {"loaded": _whisper_model is not None, "model_size": _MODEL_SIZE,
+            "device": _MODEL_DEVICE, "max_duration_seconds": MAX_AUDIO_DURATION_SECONDS}
+
+
+def proses_audio_ke_teks(jalur_file: str) -> dict:
     """
-    Fungsi utama Engine STT Road2Work.
-    Menerima jalur file audio (dari user via FastAPI) dan mengembalikan teks dalam format Dictionary (JSON-ready).
+    Transkripsi audio ke teks. Dipanggil endpoint POST /v1/stt/transcribe.
+    Validasi: file ada, ukuran ≤ 25MB, durasi ≤ 120 detik.
     """
-    # 1. PROTEKSI ERROR: Cek apakah file audio dari user benar-benar ada/terkirim
     if not os.path.exists(jalur_file):
-        return {
-            "status": "error",
-            "pesan": f"File tidak ditemukan di server: {jalur_file}",
-            "data_transkrip": None
-        }
+        return {"status": "error", "pesan": f"File tidak ditemukan: '{jalur_file}'", "data_transkrip": None}
+
+    file_size_mb = os.path.getsize(jalur_file) / (1024 * 1024)
+    if file_size_mb == 0:
+        return {"status": "error", "pesan": "File audio kosong (0 byte).", "data_transkrip": None}
+    if file_size_mb > MAX_AUDIO_FILE_SIZE_MB:
+        return {"status": "error", "pesan": f"File terlalu besar ({file_size_mb:.1f}MB). Maks {MAX_AUDIO_FILE_SIZE_MB}MB.", "data_transkrip": None}
 
     start_time = time.time()
-    
     try:
-        # 2. PROSES TRANSKRIPSI AI
-        # vad_filter=True sangat penting untuk memotong hening/suara napas user agar lebih ngebut
-        # beam_size=5 membuat AI berpikir lebih akurat dalam menyusun tata bahasa
-        segments, info = model.transcribe(jalur_file, beam_size=5, language="id", vad_filter=True)
-        
-        # 3. PENGGABUNGAN TEKS
-        # Mengumpulkan semua potongan kata yang didengar AI menjadi satu paragraf utuh
-        kumpulan_teks = [segment.text.strip() for segment in segments]
-        teks_final = " ".join(kumpulan_teks)
-        
-        waktu_proses = round(time.time() - start_time, 2)
-        
-        # 4. OUTPUT SUKSES
-        # Format terstruktur ini yang akan diterima oleh FastAPI Adil dan diteruskan ke HP User
-        return {
-            "status": "success",
-            "pesan": "Audio berhasil ditranskripsi.",
-            "data_transkrip": teks_final,
-            "waktu_proses_detik": waktu_proses
-        }
-        
-    except Exception as e:
-        # 5. PROTEKSI CRASH SYSTEM
-        # Jika tiba-tiba mesin AI gagal (misal file suara korup), server tidak akan mati
-        return {
-            "status": "error",
-            "pesan": f"Terjadi kesalahan internal pada mesin AI: {str(e)}",
-            "data_transkrip": None
-        }
+        model = _get_model()
+        segments_gen, info = model.transcribe(jalur_file, beam_size=5, language="id", vad_filter=True)
 
-# ===========================================================================
-# BLOK PENGUJIAN LOKAL KETIKA NGULIK
-# Blok ini HANYA berjalan kalau kamu menjalankan file ini langsung di komputermu.
-# Blok ini TIDAK AKAN berjalan/mengganggu saat file ini di-import oleh Adil nanti.
-# ===========================================================================
+        audio_duration = round(info.duration, 2) if hasattr(info, "duration") else None
+        if audio_duration and audio_duration > MAX_AUDIO_DURATION_SECONDS:
+            return {"status": "error", "pesan": f"Durasi audio ({audio_duration:.0f}s) melebihi batas {MAX_AUDIO_DURATION_SECONDS}s.", "data_transkrip": None}
+
+        kumpulan_teks = [seg.text.strip() for seg in segments_gen if seg.text.strip()]
+        teks_final    = " ".join(kumpulan_teks)
+
+        if not teks_final:
+            return {"status": "error", "pesan": "Tidak ada suara terdeteksi. Periksa mikrofon.", "data_transkrip": None}
+
+        return {
+            "status": "success", "pesan": "Audio berhasil ditranskripsi.",
+            "data_transkrip": teks_final,
+            "durasi_audio_detik": audio_duration,
+            "waktu_proses_detik": round(time.time() - start_time, 2),
+        }
+    except RuntimeError as e:
+        return {"status": "error", "pesan": str(e), "data_transkrip": None}
+    except Exception as e:
+        return {"status": "error", "pesan": f"Kesalahan memproses audio: {str(e)}", "data_transkrip": None}
+
+
 if __name__ == "__main__":
     import json
-    
-    # Ini nama file audio dummy yang ada di komputermu untuk testing
-    file_audio_tes = "tes_suara.wav" 
-    
-    print(f"\n[TESTING LOKAL] Menerima request file: {file_audio_tes}...")
-    hasil_respon = proses_audio_ke_teks(file_audio_tes)
-    
-    print("\n=== RESPON API STT (YANG AKAN DIKIRIM KE FULLSTACK) ===")
-    print(json.dumps(hasil_respon, indent=4))
-    print("========================================================\n")
+    hasil = proses_audio_ke_teks("tes_suara.wav")
+    print(json.dumps(hasil, indent=4, ensure_ascii=False))

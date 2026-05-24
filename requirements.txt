@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+python-multipart
+pydantic
+pdfplumber
+requests
+numpy
+pandas
+scikit-learn
+tensorflow
+google-genai
+faster-whisper
+nltk
+Sastrawi
