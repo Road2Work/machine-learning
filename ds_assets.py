@@ -36,6 +36,9 @@ ASSET_FILENAMES: dict[str, str] = {
     "scoring_rubric": "scoring_rubric.json",
     "evidence_ladder_mapping": "evidence_ladder_mapping.json",
     "answer_quality_dataset": "answer_quality_dataset_synthetic.csv",
+    "answer_quality_train": "dataset_train.csv",
+    "answer_quality_val": "dataset_val.csv",
+    "answer_quality_test": "dataset_test.csv",
     "answer_quality_manual_test": "answer_quality_manual_test.csv",
 }
 
@@ -51,6 +54,9 @@ _ENV_BY_ASSET: dict[str, str] = {
     "scoring_rubric": "SCORING_RUBRIC_PATH",
     "evidence_ladder_mapping": "EVIDENCE_LADDER_MAPPING_PATH",
     "answer_quality_dataset": "ANSWER_QUALITY_DATASET_PATH",
+    "answer_quality_train": "ANSWER_QUALITY_TRAIN_PATH",
+    "answer_quality_val": "ANSWER_QUALITY_VAL_PATH",
+    "answer_quality_test": "ANSWER_QUALITY_TEST_PATH",
     "answer_quality_manual_test": "ANSWER_QUALITY_MANUAL_TEST_PATH",
 }
 
@@ -308,7 +314,21 @@ def get_skill_taxonomy() -> dict[str, Any]:
 
 
 def answer_quality_dataset_path() -> Path:
-    return asset_path("answer_quality_dataset")
+    """Backward-compatible dataset path. Prefer train/val/test for v2.1."""
+    train_path = asset_path("answer_quality_train")
+    return train_path if train_path.exists() else asset_path("answer_quality_dataset")
+
+
+def answer_quality_train_path() -> Path:
+    return asset_path("answer_quality_train")
+
+
+def answer_quality_val_path() -> Path:
+    return asset_path("answer_quality_val")
+
+
+def answer_quality_test_path() -> Path:
+    return asset_path("answer_quality_test")
 
 
 def answer_quality_manual_test_path() -> Path:
@@ -318,6 +338,18 @@ def answer_quality_manual_test_path() -> Path:
 
 def load_answer_quality_dataset():
     return load_csv_asset("answer_quality_dataset")
+
+
+def load_answer_quality_train():
+    return load_csv_asset("answer_quality_train")
+
+
+def load_answer_quality_val():
+    return load_csv_asset("answer_quality_val")
+
+
+def load_answer_quality_test():
+    return load_csv_asset("answer_quality_test")
 
 
 def load_answer_quality_manual_test():

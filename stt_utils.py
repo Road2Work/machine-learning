@@ -14,8 +14,8 @@ import os
 import time
 from typing import Any
 
-MAX_AUDIO_DURATION_SECONDS: int = 150
-MAX_AUDIO_FILE_SIZE_MB:     int = 25
+MAX_AUDIO_DURATION_SECONDS: int = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "90"))
+MAX_AUDIO_FILE_SIZE_MB:     int = int(os.getenv("MAX_AUDIO_FILE_SIZE_MB", "25"))
 
 _MODEL_SIZE    = "base"
 _MODEL_DEVICE  = "cpu"
@@ -43,10 +43,10 @@ def get_model_info() -> dict:
             "device": _MODEL_DEVICE, "max_duration_seconds": MAX_AUDIO_DURATION_SECONDS}
 
 
-def proses_audio_ke_teks(jalur_file: str) -> dict:
+def proses_audio_ke_teks(jalur_file: str, language: str | None = None, max_duration_seconds: int | None = None) -> dict:
     """
     Transkripsi audio ke teks. Dipanggil endpoint POST /v1/stt/transcribe.
-    Validasi: file ada, ukuran ≤ 25MB, durasi ≤ 120 detik.
+    Validasi: file ada, ukuran ≤ 25MB, durasi ≤ 90 detik. Silence tidak menjadi auto-stop; audio diproses setelah recording selesai dari frontend/backend.
     """
     if not os.path.exists(jalur_file):
         return {"status": "error", "pesan": f"File tidak ditemukan: '{jalur_file}'", "data_transkrip": None}
@@ -60,11 +60,13 @@ def proses_audio_ke_teks(jalur_file: str) -> dict:
     start_time = time.time()
     try:
         model = _get_model()
-        segments_gen, info = model.transcribe(jalur_file, beam_size=5, language="id", vad_filter=True)
+        language_code = "id" if not language or language in {"id-ID", "id", "auto"} else language.split("-")[0]
+        max_duration = int(max_duration_seconds or MAX_AUDIO_DURATION_SECONDS)
+        segments_gen, info = model.transcribe(jalur_file, beam_size=5, language=language_code, vad_filter=False)
 
         audio_duration = round(info.duration, 2) if hasattr(info, "duration") else None
-        if audio_duration and audio_duration > MAX_AUDIO_DURATION_SECONDS:
-            return {"status": "error", "pesan": f"Durasi audio ({audio_duration:.0f}s) melebihi batas {MAX_AUDIO_DURATION_SECONDS}s.", "data_transkrip": None}
+        if audio_duration and audio_duration > max_duration:
+            return {"status": "error", "kode": "AUDIO_TOO_LONG", "pesan": f"Durasi audio ({audio_duration:.0f}s) melebihi batas {max_duration}s.", "data_transkrip": None, "durasi_audio_detik": audio_duration}
 
         kumpulan_teks = [seg.text.strip() for seg in segments_gen if seg.text.strip()]
         teks_final    = " ".join(kumpulan_teks)
@@ -77,6 +79,8 @@ def proses_audio_ke_teks(jalur_file: str) -> dict:
             "data_transkrip": teks_final,
             "durasi_audio_detik": audio_duration,
             "waktu_proses_detik": round(time.time() - start_time, 2),
+            "silence_detected": False,
+            "silence_duration_seconds": 0,
         }
     except RuntimeError as e:
         return {"status": "error", "pesan": str(e), "data_transkrip": None}

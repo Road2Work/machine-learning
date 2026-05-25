@@ -1,0 +1,72 @@
+{
+  "labels": [
+    "Weak",
+    "Average",
+    "Strong"
+  ],
+  "max_length": 220,
+  "vocab_size": 20000,
+  "feature_names": [
+    "has_tool",
+    "has_metric",
+    "has_impact",
+    "has_action",
+    "has_context",
+    "evidence_level",
+    "answer_length_words",
+    "role_relevance",
+    "star_structure",
+    "evidence_specificity",
+    "technical_accuracy",
+    "communication_clarity",
+    "self_awareness"
+  ],
+  "score_strategy": "deterministic_weighted_rubric_custom_layer",
+  "score_column": "final_score_0_1",
+  "label_column": "quality_label",
+  "train_dataset_path": "D:\\Kuliah\\Semester 6\\Capstone\\Capstone Project\\data_science_resources\\dataset_train.csv",
+  "val_dataset_path": "D:\\Kuliah\\Semester 6\\Capstone\\Capstone Project\\data_science_resources\\dataset_val.csv",
+  "test_dataset_path": "D:\\Kuliah\\Semester 6\\Capstone\\Capstone Project\\data_science_resources\\dataset_test.csv",
+  "dataset_path": "D:\\Kuliah\\Semester 6\\Capstone\\Capstone Project\\data_science_resources\\dataset_train.csv",
+  "training_method": "custom_gradient_tape",
+  "tensorboard_log_dir": "models\\logs\\gradient_tape\\20260526-022934",
+  "score_calibration": {
+    "scale": 1.000020955638491,
+    "bias": -0.0016552274438340914,
+    "method": "linear_affine_validation",
+    "raw_val_mae": 0.0016424175119027495,
+    "calibrated_val_mae": 0.003263342659920454
+  },
+  "last_history": {
+    "loss": [
+      0.3352873623371124
+    ],
+    "answer_quality_loss": [
+      0.4469800591468811
+    ],
+    "readiness_score_loss": [
+      1.3100872820359655e-05
+    ],
+    "answer_quality_accuracy": [
+      0.8265734314918518
+    ],
+    "readiness_score_mae": [
+      0.00047118787188082933
+    ],
+    "val_loss": [
+      0.019377639517188072
+    ],
+    "val_answer_quality_loss": [
+      0.025600019842386246
+    ],
+    "val_readiness_score_loss": [
+      4.440625343704596e-05
+    ],
+    "val_answer_quality_accuracy": [
+      0.997826099395752
+    ],
+    "val_readiness_score_mae": [
+      0.0015739848604425788
+    ]
+  }
+}

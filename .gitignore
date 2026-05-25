@@ -1,13 +1,58 @@
-.env
+# ====================================================================
+# Road2Work - Machine Learning & API GitIgnore Configuration
+# ====================================================================
+
+# 1. Python Virtual Environment (Folder env lokal kamu)
+machine_learning/
 venv/
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-models/*.keras
-models/*.h5
-models/*.json
-*.log
-data_science_resources/
-road2work_ai_fixed/
-models/
-README_DS_INTEGRATION.md
+env/
+ENV/
+
+# 2. Python Internal Caches & Compiled Files
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# 3. Jupyter Notebook Checkpoints & Outputs
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+.local
+.chronicle
+
+# 4. TensorBoard Logs & Experiment History
+models/logs/
+**/logs/
+*.tfevents.*
+
+# 5. Model Files & Weights (Ukuran Besar / Large Files)
+*.h5
+*.keras
+*.savedmodel/
+*.pb
+
+# 6. OS Specific Files (Sampah bawaan sistem operasi)
+.DS_Store
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# 7. Environment Variables & Credentials (Sangat Sensitif!)
+.env
+.env.local
+.env.*
+secrets.json
+
+# 8. Local IDE Settings (Opsional, biar settingan VS Code personal gak ikut ke-push)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# 9. file sementara
+/road2work_ai_fixed
+/data_science_resources

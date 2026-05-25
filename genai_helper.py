@@ -249,6 +249,10 @@ def generate_natural_question(
 
     asked = interview_state.get("asked_questions", []) or []
     question_index = int(interview_state.get("main_question_index", 0))
+    target_override = interview_state.get("target_competency_override")
+    adaptive_memory = interview_state.get("adaptive_memory", {}) or {}
+    weakness_history = interview_state.get("weakness_history", []) or []
+    practice_mode = interview_state.get("practice_mode") or ("adaptive_from_history" if adaptive_memory.get("enabled") else "first_session")
 
     raw_competency = competency_map.get(role) or competency_map.get("default") or {}
     if isinstance(raw_competency, dict):
@@ -271,6 +275,9 @@ def generate_natural_question(
     else:
         target_competency = str(selected_competency)
         competency_detail = {"competency": target_competency}
+    if target_override:
+        target_competency = str(target_override)
+        competency_detail = {"competency": target_competency, "source": "adaptive_memory_or_session_state"}
 
     seeds = question_seed.get(role) or question_seed.get("default") or []
     if not isinstance(seeds, list):
@@ -303,12 +310,23 @@ Konteks kandidat:
 - Pengalaman/evidence kandidat: {experiences}
 - Pertanyaan yang sudah ditanyakan: {asked}
 
+Adaptive practice memory v2.3:
+- Practice mode: {practice_mode}
+- Previous weakness history: {weakness_history}
+- Previous interview summary: {adaptive_memory.get("previous_interview_summary")}
+- Latest interview feedback: {adaptive_memory.get("latest_interview_feedback")}
+- Improvement focus: {adaptive_memory.get("improvement_focus")}
+- Avoid repeated questions: {adaptive_memory.get("avoid_repeated_questions", True)}
+- Retry mode: {adaptive_memory.get("retry_mode", False)}
+
 Aturan:
-1. Jangan mengulang pertanyaan yang sudah ada.
-2. Jangan menanyakan hal yang terlalu jauh dari konteks kandidat.
-3. Dorong kandidat menjawab dengan pengalaman nyata, kontribusi pribadi, tools, dan evidence.
-4. Bahasa Indonesia, profesional, singkat, seperti HRD sungguhan.
-5. Kalau question seed tersedia, gunakan sebagai arah pertanyaan tetapi boleh diparafrase agar natural.
+1. Jangan mengulang pertanyaan yang sudah ada secara sama persis.
+2. Jika practice mode adaptive_from_history, prioritaskan weakness terbesar dan improvement focus.
+3. Jika retry_mode false, jangan mengulang wording pertanyaan lama. Kompetensi boleh sama, wording harus berbeda.
+4. Jangan menanyakan hal yang terlalu jauh dari konteks kandidat.
+5. Dorong kandidat menjawab dengan pengalaman nyata, kontribusi pribadi, tools, dan evidence.
+6. Bahasa Indonesia, profesional, singkat, seperti HRD sungguhan.
+7. Kalau question seed tersedia, gunakan sebagai arah pertanyaan tetapi boleh diparafrase agar natural.
 
 Balas HANYA JSON valid:
 {{
@@ -339,10 +357,19 @@ def _fallback_natural_question(role: str, skills: list[str], competency: str, as
     skills_text = ", ".join(skills[:4]) if skills else "skill yang kamu punya"
     options = {
         "role_relevance": f"Ceritakan pengalaman paling relevan yang menunjukkan kamu siap untuk posisi {role}.",
+        "role_relevance_and_evidence": f"Ceritakan satu pengalaman yang paling membuktikan kesiapanmu untuk posisi {role}, termasuk tools, kontribusi pribadi, dan hasilnya.",
         "evidence_specificity": f"Bisa jelaskan satu project yang pernah kamu kerjakan dengan {skills_text}, termasuk konteks dan hasilnya?",
         "technical_accuracy": f"Pilih satu pengalaman teknis yang paling kuat. Bagaimana proses, tools, dan keputusan teknis yang kamu ambil?",
         "communication_clarity": "Coba jelaskan salah satu pengalamanmu secara runtut: situasinya apa, tugasmu apa, aksi yang kamu ambil, dan hasilnya.",
         "self_awareness": f"Menurut kamu, kekuatan dan area pengembanganmu untuk posisi {role} apa saja?",
+        "self_introduction": f"Silakan perkenalkan diri kamu secara singkat dan jelaskan pengalaman yang paling relevan dengan role {role}.",
+        "interest_need_of_learning": f"Apa yang membuat kamu tertarik pada posisi {role}, dan skill apa yang paling ingin kamu tingkatkan untuk role ini?",
+        "self_confidence": f"Apa kekuatan utama kamu untuk posisi {role}, dan contoh pengalaman apa yang membuktikannya?",
+        "skill": f"Tools, metode, atau skill apa yang pernah kamu gunakan dalam project yang relevan dengan posisi {role}?",
+        "solution_skill": "Ceritakan situasi ketika kamu menyelesaikan masalah dalam project atau organisasi. Apa langkah yang kamu ambil dan hasilnya?",
+        "predictive_based": "Ceritakan pengalaman ketika kamu memperkirakan risiko, dampak, atau hasil dari sebuah keputusan/solusi.",
+        "predictive_based_recruitment": f"Bukti apa yang menunjukkan kamu siap menjalankan tanggung jawab posisi {role}?",
+        "agile_culture": "Ceritakan pengalaman ketika kamu harus beradaptasi dengan perubahan cepat dalam tim atau project.",
     }
     question = options.get(competency, options["role_relevance"])
     if question in asked:

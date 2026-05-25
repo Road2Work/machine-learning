@@ -13,3 +13,4 @@ google-genai
 faster-whisper
 nltk
 Sastrawi
+tensorboard
