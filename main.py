@@ -1,35 +1,3 @@
-"""
-main.py — FastAPI AI Service Road2Work.id
-
-v2.3 — aligned with Road2Work Overview v2.3 Adaptive Session + API Contract v2.3
-
-Backend ↔ FastAPI AI Service endpoints:
-- POST /v1/profile/extract-cv              (v2.3 canonical)
-- POST /v1/profile/extract-manual          (v2.3 canonical)
-- POST /v1/role-fit/generate-ranking
-- POST /v1/role-fit/calculate-score        (v2.3 canonical)
-- POST /v1/interview/build-context         (supports adaptivePracticeMemory)
-- POST /v1/interview/generate-question     (v2.3 canonical)
-- POST /v1/stt/transcribe                  (90s, no silence auto-stop)
-- POST /v1/interview/evaluate-answer
-- POST /v1/interview/generate-clarification (v2.3 canonical)
-- POST /v1/interview/generate-result
-- POST /v1/model/predict-answer-quality
-- POST /v1/dashboard/generate-summary
-
-Backward-compatible aliases from v2.1 are still supported:
-- POST /v1/context/extract-cv, /v1/context/extract-profile
-- POST /v1/role-fit/score
-- POST /v1/interview/next-question, /v1/interview/clarifying-question
-
-Notes:
-- Frontend tetap memanggil Express Backend. FastAPI menerima payload terkontrol dari Backend.
-- STT mengikuti policy 90 detik: stop condition ditentukan frontend/backend (Mic Off atau timeout),
-  FastAPI memvalidasi audio maksimal 90 detik dan tidak menerapkan silence auto-stop.
-- Dataset TensorFlow tetap memakai dataset_train.csv, dataset_val.csv, dataset_test.csv dari Data Science.
-- Adaptive interview antar session menggunakan practice memory dari Backend/PostgreSQL.
-"""
-
 from __future__ import annotations
 
 from dotenv import load_dotenv
