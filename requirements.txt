@@ -9,8 +9,8 @@ numpy
 pandas
 scikit-learn
 tensorflow
-google-genai
 faster-whisper
 nltk
 Sastrawi
 tensorboard
+openai

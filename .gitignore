@@ -38,13 +38,13 @@ ehthumbs.db
 Icon?
 Thumbs.db
 
-# 7. Environment Variables & Credentials (Sangat Sensitif!)
+# 7. Environment Variables & Credentials 
 .env
 .env.local
 .env.*
 secrets.json
 
-# 8. Local IDE Settings (Opsional, biar settingan VS Code personal gak ikut ke-push)
+# 8. Local IDE Settings
 .vscode/
 .idea/
 *.suo
@@ -56,3 +56,10 @@ secrets.json
 # 9. file sementara
 /road2work_ai_fixed
 /data_science_resources
+
+
+docker-compose.dockerhub.yml
+docker-compose.local.yml
+docker-compose.yml
+Dockerfile
+.dockerignore

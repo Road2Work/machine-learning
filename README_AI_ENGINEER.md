@@ -1,18 +1,18 @@
 # Road2Work.id — AI Engineer Service
 
-AI Engineer service untuk project **Road2Work.id**, yaitu AI Career Readiness Platform yang menangani:
+AI Engineer service untuk **Road2Work.id**, AI Career Readiness Platform yang menangani:
 
 - Professional profile extraction dari CV atau profil manual
 - Role fit ranking dan role fit score
 - Adaptive voice interview
 - Speech-to-text 90 detik
-- Answer evaluation dan Evidence Ladder
+- Answer evaluation, Evidence Ladder, dan weakness detection
 - Clarifying question
-- TensorFlow answer quality model
+- TensorFlow Answer Quality Model
 - Career readiness result / dashboard summary
 - Adaptive interview antar session berdasarkan practice memory
 
-Service ini dibangun menggunakan **FastAPI**, **TensorFlow**, **Google Gemini / GenAI**, dan **faster-whisper**.
+Service ini dibangun menggunakan **FastAPI**, **TensorFlow**, **Google Gemini / GenAI**, **faster-whisper**, **Docker**, dan **DockerHub**.
 
 ---
 
@@ -23,20 +23,24 @@ Service ini dibangun menggunakan **FastAPI**, **TensorFlow**, **Google Gemini / 
 | API Service | FastAPI |
 | Server Runner | Uvicorn |
 | Deep Learning Model | TensorFlow / Keras Functional API |
+| Custom Component | Custom Layer, Custom Callback |
 | Custom Training Loop | `tf.GradientTape` |
 | Model Monitoring | TensorBoard |
 | Generative AI | Google Gemini API |
 | Speech-to-Text | faster-whisper |
 | NLP Utility | NLTK, Sastrawi, regex-based extraction |
-| Dataset / Asset Loader | JSON / CSV dari `data_science_resources` |
+| Dataset / Asset Loader | JSON / CSV dari repo `data-science` |
 | Containerization | Docker, Docker Compose |
+| Image Registry | DockerHub |
 
 ---
 
-## 2. Struktur Project
+## 2. Struktur Project Terbaru
+
+Struktur repo **machine-learning**:
 
 ```txt
-road2work-ai/
+machine-learning/
 ├── main.py
 ├── model_builder.py
 ├── genai_helper.py
@@ -49,56 +53,120 @@ road2work-ai/
 ├── notebook.ipynb
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker-compose.dockerhub.yml
+├── .dockerignore
 ├── scripts/
 │   ├── smoke_test_contract.py
 │   ├── train_answer_quality_model.py
 │   ├── train_answer_quality_custom_loop.py
 │   ├── evaluate_split_datasets.py
-│   └── update_ds_resources.sh
+│   ├── update_ds_resources.sh
+│   └── update_ds_resources.ps1
 ├── models/
 │   ├── answer_quality_model.keras
 │   ├── answer_quality_tokenizer.json
 │   ├── answer_quality_meta.json
 │   └── logs/
 └── data_science_resources/
-    ├── dataset_train.csv
-    ├── dataset_val.csv
-    ├── dataset_test.csv
-    ├── role_tree_dropdown.json
-    ├── role_skill_matrix.json
-    ├── skill_taxonomy.json
-    ├── competency_map.json
-    ├── question_seed.json
-    ├── weakness_taxonomy.json
-    ├── scoring_rubric.json
-    └── evidence_ladder_mapping.json
+    └── data/
+        ├── 01_raw/
+        │   ├── answer_dataset.csv
+        │   ├── role_tree_dropdown.json
+        │   ├── role_skill_matrix.json
+        │   ├── skill_taxonomy.json
+        │   ├── competency_map.json
+        │   ├── question_seed.json
+        │   ├── weakness_taxonomy.json
+        │   ├── scoring_rubric.json
+        │   └── evidence_ladder_mapping.json
+        ├── 02_interim/
+        ├── 03_processed/
+        │   ├── train_df.csv
+        │   ├── val_df.csv
+        │   └── test_df.csv
+        └── 99_archive/
 ```
+
+> Catatan penting: dataset utama model **tidak lagi dibaca dari root `data_science_resources/`**, tetapi dari `data_science_resources/data/03_processed/`.
 
 ---
 
 ## 3. Clone Project
 
 ```bash
-git clone <https://github.com/Road2Work/machine-learning.git>
-cd <NAMA_FOLDER_PROJECT>
+git clone https://github.com/Road2Work/machine-learning.git
+cd machine-learning
 ```
 
-Jika project menggunakan submodule untuk repo Data Science:
+Jika repo Data Science sudah dipasang sebagai submodule:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-Jika belum ada submodule Data Science, tambahkan:
+Jika belum ada submodule Data Science:
 
 ```bash
 git submodule add https://github.com/Road2Work/data-science.git data_science_resources
 git submodule update --init --recursive
 ```
 
+Cek struktur Data Science:
+
+```bash
+ls data_science_resources/data/03_processed
+```
+
+Harus ada:
+
+```txt
+train_df.csv
+val_df.csv
+test_df.csv
+```
+
 ---
 
-## 4. Setup Environment Python
+## 4. Data Science Resources Layout
+
+AI service membaca data dari repo `data-science` dengan struktur berikut:
+
+| Folder | Fungsi |
+|---|---|
+| `data/01_raw/` | Asset mentah dan guardrail AI |
+| `data/02_interim/` | Data sementara dari pipeline DS |
+| `data/03_processed/` | Dataset final train/validation/test untuk model |
+| `data/99_archive/` | Arsip dataset lama |
+
+### 4.1 File dari `data/03_processed`
+
+File utama untuk training dan evaluasi:
+
+| File | Fungsi |
+|---|---|
+| `train_df.csv` | Dataset training answer quality model |
+| `val_df.csv` | Dataset validation |
+| `test_df.csv` | Dataset testing final |
+
+### 4.2 File dari `data/01_raw`
+
+File yang digunakan sebagai guardrail AI:
+
+| File | Fungsi |
+|---|---|
+| `answer_dataset.csv` | Dataset mentah sebelum split |
+| `role_tree_dropdown.json` | Data dropdown Domain → Role Family → Target Role |
+| `role_skill_matrix.json` | Matrix role dan skill |
+| `skill_taxonomy.json` | Normalisasi skill dan tools |
+| `competency_map.json` | Competency per role |
+| `question_seed.json` | Seed pertanyaan interview |
+| `weakness_taxonomy.json` | Weakness dan clarification mapping |
+| `scoring_rubric.json` | Bobot scoring answer evaluation |
+| `evidence_ladder_mapping.json` | Definisi Evidence Ladder level 1–5 |
+
+---
+
+## 5. Setup Environment Python
 
 Disarankan memakai Python **3.10**.
 
@@ -122,7 +190,7 @@ pip install -r requirements.txt
 
 ---
 
-## 5. Setup Environment Variable
+## 6. Setup Environment Variable
 
 Copy file `.env.example` menjadi `.env`.
 
@@ -138,13 +206,19 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Isi minimal `.env`:
+Isi minimal `.env` untuk local development:
 
 ```env
 GEMINI_API_KEY=isi_api_key_kamu
 GEMINI_MODEL=gemini-2.5-flash
 
 DS_RESOURCES_DIR=./data_science_resources
+DS_RAW_DIR=./data_science_resources/data/01_raw
+DS_PROCESSED_DIR=./data_science_resources/data/03_processed
+
+ANSWER_QUALITY_TRAIN_PATH=./data_science_resources/data/03_processed/train_df.csv
+ANSWER_QUALITY_VAL_PATH=./data_science_resources/data/03_processed/val_df.csv
+ANSWER_QUALITY_TEST_PATH=./data_science_resources/data/03_processed/test_df.csv
 
 MODEL_DIR=./models
 ANSWER_QUALITY_MODEL_PATH=./models/answer_quality_model.keras
@@ -154,47 +228,74 @@ ANSWER_QUALITY_META_PATH=./models/answer_quality_meta.json
 MAX_MAIN_QUESTIONS=5
 MAX_AUDIO_DURATION_SECONDS=90
 STT_LOW_CONFIDENCE_THRESHOLD=0.60
+DS_ASSET_AUTO_RELOAD=true
 ```
 
-Jika `GEMINI_API_KEY` kosong, beberapa fitur GenAI akan memakai fallback lokal. Namun untuk hasil terbaik, gunakan API key Gemini.
+Jika menggunakan Docker, path di dalam `.env` dapat diarahkan ke `/app`:
+
+```env
+DS_RESOURCES_DIR=/app/data_science_resources
+DS_RAW_DIR=/app/data_science_resources/data/01_raw
+DS_PROCESSED_DIR=/app/data_science_resources/data/03_processed
+
+ANSWER_QUALITY_TRAIN_PATH=/app/data_science_resources/data/03_processed/train_df.csv
+ANSWER_QUALITY_VAL_PATH=/app/data_science_resources/data/03_processed/val_df.csv
+ANSWER_QUALITY_TEST_PATH=/app/data_science_resources/data/03_processed/test_df.csv
+
+MODEL_DIR=/app/models
+ANSWER_QUALITY_MODEL_PATH=/app/models/answer_quality_model.keras
+ANSWER_QUALITY_TOKENIZER_PATH=/app/models/answer_quality_tokenizer.json
+ANSWER_QUALITY_META_PATH=/app/models/answer_quality_meta.json
+```
+
+> Jangan push `.env` ke GitHub. Push hanya `.env.example`.
 
 ---
 
-## 6. Data Science Resources
+## 7. Update Data dari Repo Data Science
 
-AI service membaca asset dari folder:
-
-```txt
-data_science_resources/
-```
-
-File yang dibutuhkan:
-
-| File | Fungsi |
-|---|---|
-| `dataset_train.csv` | Dataset training answer quality model |
-| `dataset_val.csv` | Dataset validation |
-| `dataset_test.csv` | Dataset testing |
-| `role_tree_dropdown.json` | Data dropdown Domain → Role Family → Target Role |
-| `role_skill_matrix.json` | Matrix role dan skill |
-| `skill_taxonomy.json` | Normalisasi skill dan tools |
-| `competency_map.json` | Competency per role |
-| `question_seed.json` | Seed pertanyaan interview |
-| `weakness_taxonomy.json` | Weakness dan clarification mapping |
-| `scoring_rubric.json` | Bobot scoring answer evaluation |
-| `evidence_ladder_mapping.json` | Definisi Evidence Ladder level 1–5 |
-
-Untuk update data dari repo Data Science:
+Ketika tim Data Science mengubah data di repo `data-science`, update submodule:
 
 ```bash
 git submodule update --remote --merge data_science_resources
 ```
 
-Setelah update, jalankan ulang training jika dataset berubah.
+Atau pakai script:
+
+### Windows PowerShell
+
+```powershell
+.\scripts\update_ds_resources.ps1
+```
+
+### macOS / Linux
+
+```bash
+./scripts/update_ds_resources.sh
+```
+
+Setelah data berubah, jalankan ulang training dan evaluasi:
+
+```bash
+python scripts/train_answer_quality_custom_loop.py
+python scripts/evaluate_split_datasets.py
+```
+
+Jika FastAPI sedang berjalan, reload asset:
+
+```bash
+curl -X POST http://localhost:8000/v1/admin/reload-ds-assets
+```
+
+Untuk Docker production atau multi-worker, lebih aman restart container:
+
+```bash
+docker compose restart road2work-ai
+```
 
 ---
 
-## 7. Train Model TensorFlow
+## 8. Train Model TensorFlow
 
 Model yang digunakan adalah **Answer Quality Model** dengan dua output:
 
@@ -228,7 +329,7 @@ Custom loop ini digunakan untuk memenuhi side quest AI. Di dalamnya terdapat:
 
 ---
 
-## 8. Evaluasi Model
+## 9. Evaluasi Model
 
 Jalankan evaluasi pada train, validation, dan test set:
 
@@ -251,11 +352,11 @@ Accuracy : 0.9783 | Target >= 0.85 | PASS
 MAE      : 0.0034 | Target <= 0.02 | PASS
 ```
 
-Gunakan hasil **test set** sebagai bukti utama performa model, bukan training accuracy.
+Gunakan hasil **test set** sebagai bukti utama performa model.
 
 ---
 
-## 9. Jalankan FastAPI Service
+## 10. Jalankan FastAPI Service secara Lokal
 
 ```bash
 uvicorn main:app --reload
@@ -273,9 +374,15 @@ Swagger API documentation:
 http://localhost:8000/docs
 ```
 
+Cek status Data Science asset:
+
+```bash
+curl http://localhost:8000/v1/admin/ds-assets/status
+```
+
 ---
 
-## 10. Smoke Test API Contract
+## 11. Smoke Test API Contract
 
 Untuk memastikan endpoint utama berjalan:
 
@@ -283,7 +390,7 @@ Untuk memastikan endpoint utama berjalan:
 python scripts/smoke_test_contract.py
 ```
 
-Smoke test ini mengecek flow utama seperti:
+Smoke test ini mengecek flow:
 
 - Extract manual profile
 - Role fit score
@@ -296,7 +403,7 @@ Smoke test ini mengecek flow utama seperti:
 
 ---
 
-## 11. Endpoint Utama FastAPI AI Service
+## 12. Endpoint Utama FastAPI AI Service
 
 Endpoint canonical v2.3:
 
@@ -317,7 +424,7 @@ Endpoint canonical v2.3:
 
 ---
 
-## 12. Contoh Request Inference Model
+## 13. Contoh Request Inference Model
 
 Endpoint:
 
@@ -346,7 +453,7 @@ Contoh response:
 
 ---
 
-## 13. Speech-to-Text 90 Detik
+## 14. Speech-to-Text 90 Detik
 
 STT mengikuti business rule:
 
@@ -374,11 +481,9 @@ Form-data:
 
 ---
 
-## 14. TensorBoard
+## 15. TensorBoard
 
 TensorBoard digunakan untuk monitoring training.
-
-Jalankan:
 
 ```bash
 tensorboard --logdir models/logs --port 6007
@@ -402,76 +507,61 @@ Jika TensorBoard tidak terbuka di VS Code notebook, jalankan lewat terminal dan 
 
 ---
 
-## 15. Jalankan dengan Docker
+## 16. DockerHub Workflow
 
-Pastikan Docker Desktop sudah berjalan.
-
-### Build image
-
-```bash
-docker compose build
-```
-
-### Run service
-
-```bash
-docker compose up
-```
-
-Atau background mode:
-
-```bash
-docker compose up -d
-```
-
-FastAPI akan berjalan di:
+Untuk kolaborasi, image utama disimpan di DockerHub:
 
 ```txt
-http://localhost:8000
+arteris/road2work-ai:v2.3
+arteris/road2work-ai:latest
 ```
 
-Swagger:
+### 16.1 Pull image dari DockerHub
+
+```bash
+docker pull arteris/road2work-ai:v2.3
+```
+
+### 16.2 Jalankan image langsung
+
+#### Windows PowerShell
+
+```powershell
+docker run --env-file .env `
+  -p 8000:8000 `
+  -v ${PWD}\models:/app/models `
+  -v ${PWD}\data_science_resources:/app/data_science_resources `
+  arteris/road2work-ai:v2.3
+```
+
+#### macOS / Linux
+
+```bash
+docker run --env-file .env \
+  -p 8000:8000 \
+  -v $(pwd)/models:/app/models \
+  -v $(pwd)/data_science_resources:/app/data_science_resources \
+  arteris/road2work-ai:v2.3
+```
+
+Buka:
 
 ```txt
 http://localhost:8000/docs
 ```
 
-### Stop service
-
-```bash
-docker compose down
-```
-
-### Lihat logs
-
-```bash
-docker compose logs -f road2work-ai
-```
-
-### Jalankan training di container
-
-```bash
-docker compose run --rm road2work-ai python scripts/train_answer_quality_custom_loop.py
-```
-
-### Jalankan evaluasi di container
-
-```bash
-docker compose run --rm road2work-ai python scripts/evaluate_split_datasets.py
-```
-
 ---
 
-## 16. Docker Compose Recommended Setup
+## 17. Docker Compose dengan DockerHub Image
 
-Contoh `docker-compose.yml`:
+Gunakan file `docker-compose.dockerhub.yml` untuk menjalankan image dari DockerHub tanpa build ulang.
+
+Contoh isi:
 
 ```yaml
 services:
   road2work-ai:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: arteris/road2work-ai:v2.3
     container_name: road2work-ai-service
     ports:
       - "8000:8000"
@@ -483,70 +573,190 @@ services:
     restart: unless-stopped
 
   tensorboard:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: arteris/road2work-ai:v2.3
     container_name: road2work-tensorboard
     command: tensorboard --logdir /app/models/logs --host 0.0.0.0 --port 6006
     ports:
       - "6006:6006"
     volumes:
       - ./models:/app/models
-    depends_on:
-      - road2work-ai
 ```
 
-Buka TensorBoard Docker:
+Jalankan:
 
-```txt
-http://localhost:6006
+```bash
+docker compose -f docker-compose.dockerhub.yml up -d
+```
+
+Cek logs:
+
+```bash
+docker compose -f docker-compose.dockerhub.yml logs -f road2work-ai
+```
+
+Stop service:
+
+```bash
+docker compose -f docker-compose.dockerhub.yml down
 ```
 
 ---
 
-## 17. Workflow Development
+## 18. Docker Build Lokal
 
-Jika baru clone project:
-
-```bash
-git clone <URL_REPOSITORY_AI_ENGINEER>
-cd <NAMA_FOLDER_PROJECT>
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-python scripts/train_answer_quality_custom_loop.py
-python scripts/evaluate_split_datasets.py
-uvicorn main:app --reload
-```
-
-Jika dataset dari DS berubah:
-
-```bash
-git submodule update --remote --merge data_science_resources
-python scripts/train_answer_quality_custom_loop.py
-python scripts/evaluate_split_datasets.py
-```
-
-Jika hanya menjalankan API:
-
-```bash
-uvicorn main:app --reload
-```
-
-Jika menggunakan Docker:
+Gunakan ini jika kamu sedang mengubah source code dan ingin build image sendiri.
 
 ```bash
 docker compose up --build
 ```
 
+Atau build manual:
+
+```bash
+docker build -t road2work-ai:local .
+```
+
+Run local image:
+
+```bash
+docker run --env-file .env -p 8000:8000 road2work-ai:local
+```
+
 ---
 
-## 18. Troubleshooting
+## 19. Push Image ke DockerHub
 
-### 1. `ModuleNotFoundError`
+Login DockerHub:
 
-Solusi:
+```bash
+docker login
+```
+
+Build image:
+
+```bash
+docker build -t road2work-ai:latest .
+```
+
+Tag image:
+
+```bash
+docker tag road2work-ai:latest arteris/road2work-ai:v2.3
+docker tag road2work-ai:latest arteris/road2work-ai:latest
+```
+
+Push image:
+
+```bash
+docker push arteris/road2work-ai:v2.3
+docker push arteris/road2work-ai:latest
+```
+
+Rekomendasi tag:
+
+| Tag | Fungsi |
+|---|---|
+| `v2.3` | Versi sesuai API Contract v2.3 |
+| `latest` | Versi terbaru |
+| `stable` | Versi aman untuk demo |
+| `dev` | Versi eksperimen |
+
+---
+
+## 20. Training dan Evaluasi di Docker
+
+Training custom loop:
+
+```bash
+docker compose run --rm road2work-ai python scripts/train_answer_quality_custom_loop.py
+```
+
+Evaluasi:
+
+```bash
+docker compose run --rm road2work-ai python scripts/evaluate_split_datasets.py
+```
+
+Jika memakai DockerHub compose:
+
+```bash
+docker compose -f docker-compose.dockerhub.yml run --rm road2work-ai python scripts/train_answer_quality_custom_loop.py
+docker compose -f docker-compose.dockerhub.yml run --rm road2work-ai python scripts/evaluate_split_datasets.py
+```
+
+Karena folder `models` di-mount sebagai volume, hasil training tetap tersimpan ke folder lokal:
+
+```txt
+models/answer_quality_model.keras
+models/answer_quality_tokenizer.json
+models/answer_quality_meta.json
+```
+
+---
+
+## 21. Workflow Harian
+
+### Jika baru clone project
+
+```bash
+git clone https://github.com/Road2Work/machine-learning.git
+cd machine-learning
+git submodule update --init --recursive
+cp .env.example .env
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/train_answer_quality_custom_loop.py
+python scripts/evaluate_split_datasets.py
+uvicorn main:app --reload
+```
+
+Untuk Windows, ganti aktivasi venv:
+
+```powershell
+.\.venv\Scripts\activate
+```
+
+### Jika hanya ingin menjalankan API via DockerHub
+
+```bash
+git clone https://github.com/Road2Work/machine-learning.git
+cd machine-learning
+git submodule update --init --recursive
+cp .env.example .env
+docker pull arteris/road2work-ai:v2.3
+docker compose -f docker-compose.dockerhub.yml up -d
+```
+
+### Jika dataset dari DS berubah
+
+```bash
+git submodule update --remote --merge data_science_resources
+python scripts/train_answer_quality_custom_loop.py
+python scripts/evaluate_split_datasets.py
+docker compose restart road2work-ai
+```
+
+### Jika source code AI berubah
+
+```bash
+docker build -t road2work-ai:latest .
+docker tag road2work-ai:latest arteris/road2work-ai:v2.3
+docker push arteris/road2work-ai:v2.3
+```
+
+Tim lain cukup menjalankan:
+
+```bash
+docker compose -f docker-compose.dockerhub.yml pull
+docker compose -f docker-compose.dockerhub.yml up -d
+```
+
+---
+
+## 22. Troubleshooting
+
+### 22.1 `ModuleNotFoundError`
 
 ```bash
 pip install -r requirements.txt
@@ -556,23 +766,7 @@ Pastikan virtual environment aktif.
 
 ---
 
-### 2. TensorFlow tidak terinstall
-
-Solusi:
-
-```bash
-pip install tensorflow
-```
-
-Atau install ulang semua dependency:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-### 3. Model `.keras` tidak ditemukan
+### 22.2 Model `.keras` tidak ditemukan
 
 Jalankan training:
 
@@ -588,31 +782,41 @@ models/answer_quality_model.keras
 
 ---
 
-### 4. Dataset tidak ditemukan
+### 22.3 Dataset tidak ditemukan
 
-Pastikan folder ini ada:
-
-```txt
-data_science_resources/
-```
-
-Dan minimal berisi:
-
-```txt
-dataset_train.csv
-dataset_val.csv
-dataset_test.csv
-```
-
-Jika menggunakan submodule:
+Pastikan submodule sudah di-init:
 
 ```bash
 git submodule update --init --recursive
 ```
 
+Pastikan file ini ada:
+
+```txt
+data_science_resources/data/03_processed/train_df.csv
+data_science_resources/data/03_processed/val_df.csv
+data_science_resources/data/03_processed/test_df.csv
+```
+
 ---
 
-### 5. Gemini API error
+### 22.4 Data guardrail tidak ditemukan
+
+Pastikan file JSON ada di:
+
+```txt
+data_science_resources/data/01_raw/
+```
+
+Cek status asset:
+
+```bash
+curl http://localhost:8000/v1/admin/ds-assets/status
+```
+
+---
+
+### 22.5 Gemini API error
 
 Pastikan `.env` berisi:
 
@@ -620,13 +824,11 @@ Pastikan `.env` berisi:
 GEMINI_API_KEY=isi_api_key_kamu
 ```
 
-Jika API key kosong, service tetap bisa berjalan dengan fallback, tetapi hasil pertanyaan dan feedback tidak sebaik GenAI asli.
+Jika API key kosong, service tetap bisa berjalan dengan fallback, tetapi hasil question/feedback tidak sebaik GenAI asli.
 
 ---
 
-### 6. STT error karena `ffmpeg`
-
-Jika STT gagal memproses audio, install `ffmpeg`.
+### 22.6 STT error karena `ffmpeg`
 
 Windows:
 
@@ -650,11 +852,9 @@ Docker sudah menginstall `ffmpeg` melalui `Dockerfile`.
 
 ---
 
-### 7. TensorBoard tidak terbuka
+### 22.7 TensorBoard tidak terbuka
 
 Matikan proses lama:
-
-Windows PowerShell:
 
 ```powershell
 taskkill /F /IM tensorboard.exe
@@ -674,7 +874,30 @@ http://localhost:6007
 
 ---
 
-## 19. Bukti Checklist AI Quest
+### 22.8 Docker image lama masih kebaca
+
+Cek image:
+
+```bash
+docker images
+```
+
+Hapus image lokal lama:
+
+```bash
+docker rmi road2work-ai:local
+docker rmi capstoneproject-road2work-ai:latest
+```
+
+Pull ulang image DockerHub:
+
+```bash
+docker pull arteris/road2work-ai:v2.3
+```
+
+---
+
+## 23. Bukti Checklist AI Quest
 
 | Quest | Bukti |
 |---|---|
@@ -690,7 +913,7 @@ http://localhost:6007
 
 ---
 
-## 20. Catatan Integrasi Fullstack
+## 24. Catatan Integrasi Fullstack
 
 Frontend tidak memanggil FastAPI secara langsung. Alur integrasi:
 
@@ -705,3 +928,50 @@ FastAPI AI Service
 Backend Express bertugas menyimpan user, profile, role, interview session, answers, result, dashboard, quota, dan admin data.
 
 FastAPI hanya menerima payload terkontrol dari backend dan mengembalikan output AI dalam format JSON sesuai API Contract v2.3.
+
+---
+
+## 25. Ringkasan Command Penting
+
+### Local run
+
+```bash
+uvicorn main:app --reload
+```
+
+### Train
+
+```bash
+python scripts/train_answer_quality_custom_loop.py
+```
+
+### Evaluate
+
+```bash
+python scripts/evaluate_split_datasets.py
+```
+
+### DockerHub run
+
+```bash
+docker compose -f docker-compose.dockerhub.yml up -d
+```
+
+### DockerHub pull update
+
+```bash
+docker compose -f docker-compose.dockerhub.yml pull
+docker compose -f docker-compose.dockerhub.yml up -d
+```
+
+### Update DS resources
+
+```bash
+git submodule update --remote --merge data_science_resources
+```
+
+### Check API docs
+
+```txt
+http://localhost:8000/docs
+```
