@@ -1,8 +1,9 @@
 """
-genai_helper.py — Generative AI Integration (Google Gemini)
+genai_helper.py — Generative AI Integration (OpenAI GPT-5.4 mini)
 Road2Work AI | CC26-PSU050
 
-v1.0.0 — aligned with Updated Product Overview
+v2.4.0 — migrated from Gemini to OpenAI Responses API
+- Default GenAI model: gpt-5.4-mini.
 - Natural adaptive question generation with DS guardrail fallback.
 - Clarifying question generation.
 - Full answer evaluation schema: score_breakdown, final_score, evidence_level,
@@ -24,21 +25,22 @@ import time
 from typing import Any
 
 try:
-    from google import genai
+    from openai import OpenAI
 except Exception:  # pragma: no cover - environment lokal bisa belum install SDK
-    genai = None
+    OpenAI = None  # type: ignore
 
 
-GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-MAX_RETRIES: int = 3
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+OPENAI_MAX_OUTPUT_TOKENS: int = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "2048"))
+MAX_RETRIES: int = int(os.getenv("GENAI_MAX_RETRIES", "3"))
 
 client = None
-if genai is not None and GEMINI_API_KEY:
+if OpenAI is not None and OPENAI_API_KEY:
     try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        client = OpenAI(api_key=OPENAI_API_KEY)
     except Exception as exc:  # pragma: no cover
-        print(f"[genai_helper] ⚠️ Gagal inisialisasi Gemini client: {exc}")
+        print(f"[genai_helper] ⚠️ Gagal inisialisasi OpenAI client: {exc}")
 
 
 EVALUATION_WEIGHTS: dict[str, float] = {
@@ -53,29 +55,41 @@ EVALUATION_WEIGHTS: dict[str, float] = {
 _ALLOWED_CLARIFICATION_TYPES = {"tools", "impact", "contribution", "specificity", "context", "metric", "structure", "role_relevance", "technical", "clarity", "self_awareness", "professionalism", None, "null"}
 
 
-def _call_gemini(prompt: str) -> str:
-    """Panggil Gemini dengan retry. Jika API key belum ada, return marker aman."""
+def _call_openai(prompt: str) -> str:
+    """Panggil OpenAI Responses API dengan retry. Jika API key belum ada, return marker aman."""
     if client is None:
-        return "GENAI_UNAVAILABLE: GEMINI_API_KEY belum tersedia atau SDK belum terinstall."
+        return "GENAI_UNAVAILABLE: OPENAI_API_KEY belum tersedia atau SDK openai belum terinstall."
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-            return (response.text or "").strip()
+            kwargs: dict[str, Any] = {
+                "model": OPENAI_MODEL,
+                "input": prompt,
+            }
+            if OPENAI_MAX_OUTPUT_TOKENS > 0:
+                kwargs["max_output_tokens"] = OPENAI_MAX_OUTPUT_TOKENS
+
+            response = client.responses.create(**kwargs)
+            return (getattr(response, "output_text", "") or "").strip()
         except Exception as e:  # pragma: no cover - tergantung API eksternal
             err = str(e)
-            if "503" in err or "UNAVAILABLE" in err or "429" in err:
-                if attempt < MAX_RETRIES - 1:
-                    wait = 2 ** attempt
-                    print(
-                        f"⚠️ [genai_helper] Gemini sibuk. "
-                        f"Retry {attempt + 1}/{MAX_RETRIES} dalam {wait}s..."
-                    )
-                    time.sleep(wait)
-                    continue
+            retryable = any(code in err for code in ["429", "500", "502", "503", "504", "rate_limit", "timeout"])
+            if retryable and attempt < MAX_RETRIES - 1:
+                wait = 2 ** attempt
+                print(
+                    f"⚠️ [genai_helper] OpenAI request sibuk/gagal sementara. "
+                    f"Retry {attempt + 1}/{MAX_RETRIES} dalam {wait}s..."
+                )
+                time.sleep(wait)
+                continue
             return f"GENAI_ERROR: {err}"
 
     return "GENAI_ERROR: Terjadi kesalahan tidak terduga."
+
+
+# Backward-compatible alias agar bagian lama yang memanggil _call_gemini tetap aman.
+def _call_gemini(prompt: str) -> str:  # pragma: no cover
+    return _call_openai(prompt)
 
 
 def _parse_json_response(raw: str, fallback: dict[str, Any]) -> dict[str, Any]:
@@ -211,7 +225,7 @@ Balas HANYA JSON valid:
   "highlighted_skills": ["3-7 skill paling relevan"]
 }}
 """
-    raw_response = _call_gemini(prompt)
+    raw_response = _call_openai(prompt)
     if raw_response.startswith("GENAI_"):
         # Fallback lokal agar extraction tetap jalan tanpa API key.
         text = " ".join(raw_narrative.split())
@@ -335,7 +349,7 @@ Balas HANYA JSON valid:
   "question_type": "main"
 }}
 """
-    raw = _call_gemini(prompt)
+    raw = _call_openai(prompt)
     fallback_question = seed_text or _fallback_natural_question(role, skills, target_competency, asked)
     fallback = {
         "question": fallback_question,
@@ -462,7 +476,7 @@ Balas HANYA JSON valid sesuai schema ini:
   "stronger_answer": "versi jawaban lebih kuat, tanpa mengarang data"
 }}
 """
-    raw_response = _call_gemini(prompt)
+    raw_response = _call_openai(prompt)
 
     fallback_score = _heuristic_base_score(answer)
     fallback_breakdown = _heuristic_breakdown(question, answer, role)
@@ -622,7 +636,7 @@ Jangan menambahkan asumsi pengalaman baru.
 
 Balas HANYA teks pertanyaannya saja.
 """
-    raw = _call_gemini(prompt)
+    raw = _call_openai(prompt)
     if raw.startswith("GENAI_") or len(raw.strip()) < 8:
         return _fallback_clarification_question(clarification_type, role)
     return raw.strip().strip('"')
@@ -714,7 +728,7 @@ Balas HANYA JSON valid:
   }}
 }}
 """
-    raw = _call_gemini(prompt)
+    raw = _call_openai(prompt)
     fallback = _fallback_dashboard(role, answers, final_score)
     if raw.startswith("GENAI_"):
         return fallback

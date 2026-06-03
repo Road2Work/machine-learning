@@ -1,10 +1,9 @@
 """
-readiness_engine.py — Interview Readiness Engine (Diva)
+readiness_engine.py — Interview Readiness Engine (OpenAI GPT-5.4 mini)
 Road2Work AI | CC26-PSU050
 
-v1.0.0 — aligned with Updated Product Overview
+v2.4.0 — migrated from REST Gemini to OpenAI Responses API
 - Prompt evaluasi mengembalikan full schema Section 8.11.
-- Tetap menggunakan REST API Gemini agar kompatibel dengan implementasi Diva.
 - Key legacy tidak lagi menjadi output utama.
 """
 
@@ -16,53 +15,70 @@ import re
 import time
 from typing import Any
 
-import requests
+try:
+    from openai import OpenAI
+except Exception:  # pragma: no cover
+    OpenAI = None  # type: ignore
 
 
-API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-URL_API = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={API_KEY}"
-MAX_RETRIES = 3
+API_KEY = os.getenv("OPENAI_API_KEY", "")
+MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+OPENAI_MAX_OUTPUT_TOKENS = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "2048"))
+MAX_RETRIES = int(os.getenv("GENAI_MAX_RETRIES", "3"))
+
+_client = None
+if OpenAI is not None and API_KEY:
+    try:
+        _client = OpenAI(api_key=API_KEY)
+    except Exception as exc:  # pragma: no cover
+        print(f"[readiness_engine] ⚠️ Gagal inisialisasi OpenAI client: {exc}")
 
 if not API_KEY:
-    print("[readiness_engine] ⚠️ GEMINI_API_KEY belum tersedia. Evaluasi REST Gemini akan fallback error string.")
+    print("[readiness_engine] ⚠️ OPENAI_API_KEY belum tersedia. Evaluasi OpenAI akan fallback error string.")
 
 
-def _tanya_gemini_safe(prompt: str) -> str:
-    """Wrapper retry-safe untuk panggilan REST API Gemini."""
-    if not API_KEY:
-        return json.dumps(_fallback_evaluation("", "GEMINI_API_KEY belum tersedia."), ensure_ascii=False)
-
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    headers = {"Content-Type": "application/json"}
+def _tanya_openai_safe(prompt: str) -> str:
+    """Wrapper retry-safe untuk panggilan OpenAI Responses API."""
+    if _client is None:
+        return json.dumps(_fallback_evaluation("", "OPENAI_API_KEY belum tersedia atau SDK openai belum terinstall."), ensure_ascii=False)
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = requests.post(URL_API, headers=headers, json=payload, timeout=30)
-            if response.status_code == 200:
-                return response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            kwargs: dict[str, Any] = {
+                "model": MODEL_NAME,
+                "input": prompt,
+            }
+            if OPENAI_MAX_OUTPUT_TOKENS > 0:
+                kwargs["max_output_tokens"] = OPENAI_MAX_OUTPUT_TOKENS
 
-            if response.status_code >= 500 and attempt < MAX_RETRIES - 1:
+            response = _client.responses.create(**kwargs)
+            return (getattr(response, "output_text", "") or "").strip()
+
+        except Exception as e:
+            err = str(e)
+            retryable = any(code in err for code in ["429", "500", "502", "503", "504", "rate_limit", "timeout"])
+            if retryable and attempt < MAX_RETRIES - 1:
                 wait = 2 ** attempt
-                print(f"[readiness_engine] HTTP {response.status_code}. Retry dalam {wait}s...")
+                print(f"[readiness_engine] OpenAI sementara gagal. Retry dalam {wait}s...")
                 time.sleep(wait)
                 continue
-
-            return json.dumps(_fallback_evaluation("", f"Gemini HTTP {response.status_code}"), ensure_ascii=False)
-
-        except requests.exceptions.Timeout:
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(2 ** attempt)
-                continue
-            return json.dumps(_fallback_evaluation("", "Request Gemini timeout."), ensure_ascii=False)
-        except requests.exceptions.RequestException as e:
-            return json.dumps(_fallback_evaluation("", f"Koneksi Gemini gagal: {e}"), ensure_ascii=False)
+            return json.dumps(_fallback_evaluation("", f"OpenAI request gagal: {err}"), ensure_ascii=False)
 
     return json.dumps(_fallback_evaluation("", "Kesalahan tidak terduga."), ensure_ascii=False)
 
 
-def tanya_gemini(prompt: str) -> str:
-    return _tanya_gemini_safe(prompt)
+# Backward-compatible alias untuk nama lama.
+def _tanya_gemini_safe(prompt: str) -> str:  # pragma: no cover
+    return _tanya_openai_safe(prompt)
+
+
+
+def tanya_openai(prompt: str) -> str:
+    return _tanya_openai_safe(prompt)
+
+
+def tanya_gemini(prompt: str) -> str:  # backward compatibility
+    return _tanya_openai_safe(prompt)
 
 
 def buat_pertanyaan_interview(role: str) -> str:
@@ -73,7 +89,7 @@ Buat 1 pertanyaan interview behavioral untuk posisi {role}.
 Pertanyaan harus mendorong kandidat menjelaskan pengalaman nyata dengan evidence.
 HANYA berikan teks pertanyaannya saja.
 """
-    return _tanya_gemini_safe(prompt)
+    return _tanya_openai_safe(prompt)
 
 
 def evaluasi_jawaban(
@@ -145,7 +161,7 @@ Balas HANYA JSON murni valid:
   "stronger_answer": "versi jawaban yang lebih kuat tanpa mengarang data"
 }}
 """
-    raw = _tanya_gemini_safe(prompt)
+    raw = _tanya_openai_safe(prompt)
     # Jika model mengembalikan non-JSON/error, main.py tetap punya normalizer.
     return raw
 
