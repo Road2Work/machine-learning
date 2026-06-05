@@ -1,0 +1,144 @@
+{
+  "Data & AI": {
+    "Python": [
+      "python3",
+      "py",
+      "pandas",
+      "numpy",
+      "scikit-learn",
+      "sklearn"
+    ],
+    "SQL": [
+      "postgresql",
+      "mysql",
+      "bigquery",
+      "sql server",
+      "database management",
+      "erd"
+    ],
+    "Data Visualization": [
+      "tableau",
+      "power bi",
+      "matplotlib",
+      "plotly",
+      "looker",
+      "dashboard design"
+    ],
+    "Machine Learning": [
+      "ml",
+      "supervised learning",
+      "unsupervised learning",
+      "tensorflow",
+      "keras",
+      "pytorch",
+      "torch"
+    ],
+    "MLOps": [
+      "mlops",
+      "model pipeline",
+      "docker",
+      "kubernetes",
+      "k8s",
+      "model deployment"
+    ]
+  },
+  "Web Development": {
+    "Frontend": [
+      "react.js",
+      "reactjs",
+      "html5",
+      "css3",
+      "tailwind",
+      "javascript",
+      "typescript",
+      "ui integration"
+    ],
+    "Backend": [
+      "node.js",
+      "nodejs",
+      "node",
+      "express.js",
+      "expressjs",
+      "restful api",
+      "api integration",
+      "jwt"
+    ],
+    "Database": [
+      "postgresql",
+      "mongodb",
+      "sqlite",
+      "redis"
+    ]
+  },
+  "Infrastructure, Cloud & Security": {
+    "Cloud": [
+      "aws",
+      "amazon web services",
+      "ec2",
+      "s3",
+      "gcp",
+      "azure"
+    ],
+    "DevOps": [
+      "ci/cd",
+      "github actions",
+      "gitlab ci",
+      "jenkins",
+      "linux",
+      "ubuntu",
+      "bash"
+    ],
+    "Security": [
+      "siem",
+      "firewall",
+      "ids",
+      "vulnerability scan",
+      "pentest basics",
+      "incident response"
+    ]
+  },
+  "Mobile Development": {
+    "Android": [
+      "kotlin",
+      "android studio",
+      "android sdk",
+      "room database"
+    ],
+    "iOS": [
+      "swift",
+      "swiftui",
+      "xcode",
+      "uikit",
+      "ios sdk"
+    ],
+    "Cross-Platform": [
+      "flutter",
+      "dart",
+      "react native",
+      "bloc",
+      "riverpod"
+    ]
+  },
+  "Software Tester": {
+    "Manual Testing": [
+      "test case design",
+      "test scenario",
+      "functional testing",
+      "bug reporting"
+    ],
+    "Automation": [
+      "selenium",
+      "selenium webdriver",
+      "cypress",
+      "api testing",
+      "postman"
+    ],
+    "Quality Assurance": [
+      "qa",
+      "regression testing",
+      "performance testing",
+      "jira",
+      "test planning"
+    ]
+  }
+}

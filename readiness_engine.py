@@ -1,8 +1,8 @@
-"""
-readiness_engine.py — Interview Readiness Engine (OpenAI GPT-5.4 mini)
+﻿"""
+readiness_engine.py â€” Interview Readiness Engine (OpenAI GPT-5.4 mini)
 Road2Work AI | CC26-PSU050
 
-v2.4.0 — migrated from REST Gemini to OpenAI Responses API
+OpenAI Responses API digunakan untuk evaluasi kesiapan interview sesuai schema Road2Work.
 - Prompt evaluasi mengembalikan full schema Section 8.11.
 - Key legacy tidak lagi menjadi output utama.
 """
@@ -31,10 +31,10 @@ if OpenAI is not None and API_KEY:
     try:
         _client = OpenAI(api_key=API_KEY)
     except Exception as exc:  # pragma: no cover
-        print(f"[readiness_engine] ⚠️ Gagal inisialisasi OpenAI client: {exc}")
+        print(f"[readiness_engine] âš ï¸ Gagal inisialisasi OpenAI client: {exc}")
 
 if not API_KEY:
-    print("[readiness_engine] ⚠️ OPENAI_API_KEY belum tersedia. Evaluasi OpenAI akan fallback error string.")
+    print("[readiness_engine] âš ï¸ OPENAI_API_KEY belum tersedia. Evaluasi OpenAI akan fallback error string.")
 
 
 def _tanya_openai_safe(prompt: str) -> str:
@@ -67,18 +67,12 @@ def _tanya_openai_safe(prompt: str) -> str:
     return json.dumps(_fallback_evaluation("", "Kesalahan tidak terduga."), ensure_ascii=False)
 
 
-# Backward-compatible alias untuk nama lama.
-def _tanya_gemini_safe(prompt: str) -> str:  # pragma: no cover
-    return _tanya_openai_safe(prompt)
-
 
 
 def tanya_openai(prompt: str) -> str:
     return _tanya_openai_safe(prompt)
 
 
-def tanya_gemini(prompt: str) -> str:  # backward compatibility
-    return _tanya_openai_safe(prompt)
 
 
 def buat_pertanyaan_interview(role: str) -> str:
@@ -210,3 +204,4 @@ if __name__ == "__main__":
     q = "Ceritakan project yang paling relevan untuk role AI Engineer."
     a = input("Jawaban: ")
     print(evaluasi_jawaban(q, a, role="AI Engineer"))
+

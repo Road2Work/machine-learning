@@ -1038,7 +1038,17 @@ def _load_tokenizer_and_meta() -> tuple[Any | None, dict[str, Any]]:
 def heuristic_answer_quality(question: str, answer: str, role: str = "") -> dict[str, Any]:
     """Rule-based fallback untuk sementara sampai model DS dilatih tersedia."""
     features = _engineer_features(question, answer, role)
-    has_tool, has_metric, has_impact, has_action, has_context, evidence_norm, length_norm = features
+    feature_map = {
+        name: float(features[idx]) if idx < len(features) else 0.0
+        for idx, name in enumerate(FEATURE_NAMES)
+    }
+    has_tool = feature_map.get("has_tool", 0.0)
+    has_metric = feature_map.get("has_metric", 0.0)
+    has_impact = feature_map.get("has_impact", 0.0)
+    has_action = feature_map.get("has_action", 0.0)
+    has_context = feature_map.get("has_context", 0.0)
+    evidence_norm = feature_map.get("evidence_level", 0.2)
+    length_norm = feature_map.get("answer_length_words", 0.0)
     evidence_level = max(1, min(5, round(evidence_norm * 5)))
 
     score = 20 + evidence_level * 10

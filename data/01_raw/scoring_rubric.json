@@ -1,0 +1,55 @@
+{
+  "score_scale": "0-100 per component; final_score_0_1 = weighted_score / 100",
+  "components": {
+    "role_relevance": {
+      "weight": 0.25,
+      "description": "Seberapa relevan pengalaman dan jawaban dengan target role yang dilamar."
+    },
+    "star_structure": {
+      "weight": 0.20,
+      "description": "Kelengkapan alur cerita menggunakan metode STAR (Situation, Task, Action, Result)."
+    },
+    "evidence_specificity": {
+      "weight": 0.20,
+      "description": "Kekuatan bukti, detail kontribusi, penggunaan tools yang spesifik, impact, dan hasil nyata."
+    },
+    "technical_accuracy": {
+      "weight": 0.15,
+      "description": "Ketepatan konsep teknis, arsitektur, atau best practice sesuai target role."
+    },
+    "communication_clarity": {
+      "weight": 0.10,
+      "description": "Kejelasan artikulasi, ringkas, tidak berbelit-belit, dan runtut saat menjawab."
+    },
+    "self_awareness": {
+      "weight": 0.10,
+      "description": "Kemampuan refleksi diri, mengenali kendala, pembelajaran (lesson learned), dan improvement."
+    }
+  },
+  "quality_label_mapping": {
+    "Weak": {
+      "min": 0.0,
+      "max": 0.49,
+      "description": "Jawaban sangat kurang, berputar-putar, atau tidak ada bukti kuat."
+    },
+    "Average": {
+      "min": 0.50,
+      "max": 0.74,
+      "description": "Jawaban cukup baik namun kurang detail pada aksi spesifik, tools, atau hasil yang terukur."
+    },
+    "Strong": {
+      "min": 0.75,
+      "max": 1.0,
+      "description": "Jawaban sangat baik, terstruktur (STAR), detail, relevan, dan memiliki hasil/dampak nyata."
+    }
+  },
+  "need_clarification_rule": {
+    "trigger_logic": "OR",
+    "true_if": [
+      "final_score_0_1 < 0.75",
+      "evidence_level <= 3",
+      "weakness_tags.length > 0"
+    ],
+    "max_clarification_per_main_question": 1
+  }
+}

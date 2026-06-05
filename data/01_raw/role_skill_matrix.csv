@@ -1,0 +1,82 @@
+domain,role_family,target_role,skill,importance,weight
+Information & Technology,Data & AI,Data Analyst,sql,high,0.25
+Information & Technology,Data & AI,Data Analyst,excel,high,0.2
+Information & Technology,Data & AI,Data Analyst,tableau,medium,0.15
+Information & Technology,Data & AI,Data Analyst,power bi,medium,0.15
+Information & Technology,Data & AI,Data Analyst,google looker studio,medium,0.15
+Information & Technology,Data & AI,Data Analyst,pandas,low,0.1
+Information & Technology,Data & AI,Data Scientist,python,high,0.25
+Information & Technology,Data & AI,Data Scientist,scikit-learn,high,0.2
+Information & Technology,Data & AI,Data Scientist,machine learning,high,0.2
+Information & Technology,Data & AI,Data Scientist,statistical analysis,high,0.2
+Information & Technology,Data & AI,Data Scientist,sql,medium,0.15
+Information & Technology,Data & AI,AI Engineer,python,high,0.25
+Information & Technology,Data & AI,AI Engineer,tensorflow,high,0.2
+Information & Technology,Data & AI,AI Engineer,pytorch,high,0.2
+Information & Technology,Data & AI,AI Engineer,natural language processing,high,0.2
+Information & Technology,Data & AI,AI Engineer,computer vision,medium,0.15
+Information & Technology,Data & AI,ML Engineer,python,high,0.25
+Information & Technology,Data & AI,ML Engineer,mlops,high,0.2
+Information & Technology,Data & AI,ML Engineer,docker,high,0.2
+Information & Technology,Data & AI,ML Engineer,scikit-learn,high,0.2
+Information & Technology,Data & AI,ML Engineer,ci/cd,medium,0.15
+Information & Technology,"Infrastructure, Cloud & Security",Cloud Engineer,aws,high,0.25
+Information & Technology,"Infrastructure, Cloud & Security",Cloud Engineer,cloud deployment,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",Cloud Engineer,docker,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",Cloud Engineer,kubernetes,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",Cloud Engineer,networking,medium,0.15
+Information & Technology,"Infrastructure, Cloud & Security",DevOps Engineer,continuous integration,high,0.25
+Information & Technology,"Infrastructure, Cloud & Security",DevOps Engineer,docker,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",DevOps Engineer,kubernetes,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",DevOps Engineer,terraform,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",DevOps Engineer,jenkins,medium,0.15
+Information & Technology,"Infrastructure, Cloud & Security",Cybersecurity Analyst,siem,high,0.25
+Information & Technology,"Infrastructure, Cloud & Security",Cybersecurity Analyst,network security,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",Cybersecurity Analyst,vulnerability assessment,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",Cybersecurity Analyst,penetration testing,high,0.2
+Information & Technology,"Infrastructure, Cloud & Security",Cybersecurity Analyst,incident response,medium,0.15
+Information & Technology,Web Development,Frontend Developer,javascript,high,0.25
+Information & Technology,Web Development,Frontend Developer,react,high,0.25
+Information & Technology,Web Development,Frontend Developer,next.js,high,0.2
+Information & Technology,Web Development,Frontend Developer,tailwind css,medium,0.15
+Information & Technology,Web Development,Frontend Developer,html,medium,0.15
+Information & Technology,Web Development,Backend Developer,node.js,high,0.25
+Information & Technology,Web Development,Backend Developer,postgresql,high,0.2
+Information & Technology,Web Development,Backend Developer,rest api,high,0.2
+Information & Technology,Web Development,Backend Developer,golang,high,0.2
+Information & Technology,Web Development,Backend Developer,express.js,medium,0.15
+Information & Technology,Web Development,Full Stack Developer,react,high,0.25
+Information & Technology,Web Development,Full Stack Developer,node.js,high,0.25
+Information & Technology,Web Development,Full Stack Developer,sql,high,0.2
+Information & Technology,Web Development,Full Stack Developer,javascript,medium,0.15
+Information & Technology,Web Development,Full Stack Developer,git,medium,0.15
+Information & Technology,Mobile Development,Android Developer,kotlin,high,0.25
+Information & Technology,Mobile Development,Android Developer,android sdk,high,0.25
+Information & Technology,Mobile Development,Android Developer,jetpack compose,high,0.2
+Information & Technology,Mobile Development,Android Developer,mvvm architecture,medium,0.15
+Information & Technology,Mobile Development,Android Developer,android studio,medium,0.15
+Information & Technology,Mobile Development,iOS Developer,swift,high,0.25
+Information & Technology,Mobile Development,iOS Developer,xcode,high,0.25
+Information & Technology,Mobile Development,iOS Developer,swiftui,high,0.2
+Information & Technology,Mobile Development,iOS Developer,combine framework,medium,0.15
+Information & Technology,Mobile Development,iOS Developer,core data,medium,0.15
+Information & Technology,Mobile Development,Mobile Developer,flutter,high,0.25
+Information & Technology,Mobile Development,Mobile Developer,react native,high,0.25
+Information & Technology,Mobile Development,Mobile Developer,dart,high,0.2
+Information & Technology,Mobile Development,Mobile Developer,javascript,medium,0.15
+Information & Technology,Mobile Development,Mobile Developer,state management,medium,0.15
+Information & Technology,Software Tester,Manual QA Tester,test case design,high,0.25
+Information & Technology,Software Tester,Manual QA Tester,bug tracking,high,0.25
+Information & Technology,Software Tester,Manual QA Tester,black box testing,high,0.2
+Information & Technology,Software Tester,Manual QA Tester,postman,medium,0.15
+Information & Technology,Software Tester,Manual QA Tester,jira,medium,0.15
+Information & Technology,Software Tester,QA Automation Engineer,selenium,high,0.25
+Information & Technology,Software Tester,QA Automation Engineer,cypress,high,0.25
+Information & Technology,Software Tester,QA Automation Engineer,test automation,high,0.2
+Information & Technology,Software Tester,QA Automation Engineer,python,medium,0.15
+Information & Technology,Software Tester,QA Automation Engineer,javascript basics,medium,0.15
+Information & Technology,Software Tester,Software Tester,software testing,high,0.25
+Information & Technology,Software Tester,Software Tester,performance testing,high,0.25
+Information & Technology,Software Tester,Software Tester,quality assurance procedures,high,0.2
+Information & Technology,Software Tester,Software Tester,api testing,medium,0.15
+Information & Technology,Software Tester,Software Tester,test automation,medium,0.15

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
 
 import io
 import os
@@ -56,8 +56,11 @@ from nlp_utils import (
     extract_evidence_signals,
     extract_experience_summary,
     extract_from_short_profile,
+    extract_profile_summary,
     extract_skills,
     normalize_skills,
+    remove_cv_header_and_contact,
+    split_skills_and_tools,
     reload_taxonomy,
 )
 from stt_utils import get_model_info, proses_audio_ke_teks
@@ -73,6 +76,7 @@ MAX_CLARIFICATION_PER_MAIN = int(os.getenv("MAX_CLARIFICATION_PER_MAIN", "1"))
 MAX_CLARIFICATION_PER_SESSION = int(os.getenv("MAX_CLARIFICATION_PER_SESSION", "3"))
 MAX_AUDIO_DURATION_SECONDS = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "90"))
 STT_LOW_CONFIDENCE_THRESHOLD = float(os.getenv("STT_LOW_CONFIDENCE_THRESHOLD", "0.60"))
+USE_GENAI_FOR_PROFILE_EXTRACTION = os.getenv("USE_GENAI_FOR_PROFILE_EXTRACTION", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 # Dev-only fallback context store. Express + PostgreSQL tetap source of truth.
 contexts: dict[str, dict[str, Any]] = {}
@@ -109,9 +113,9 @@ DEFAULT_COMPETENCY_SEQUENCE = [
 # --------------------------------------------------------------------------- #
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Road2Work FastAPI AI Service siap — API Contract v2.3 Adaptive Session")
+    print("ðŸš€ Road2Work FastAPI AI Service siap â€” API Contract v2.3 Adaptive Session")
     yield
-    print("🛑 Road2Work FastAPI AI Service berhenti")
+    print("ðŸ›‘ Road2Work FastAPI AI Service berhenti")
 
 
 app = FastAPI(
@@ -137,7 +141,7 @@ app.add_middleware(
 
 
 # --------------------------------------------------------------------------- #
-# SCHEMAS — tolerant to fullstack variations
+# SCHEMAS â€” tolerant to fullstack variations
 # --------------------------------------------------------------------------- #
 class RolePayload(BaseModel):
     id: str | None = None
@@ -220,6 +224,8 @@ class SessionStatePayload(BaseModel):
     currentState: str | None = None
     practice_mode: str | None = None
     practiceMode: str | None = None
+    last_answer: dict[str, Any] = Field(default_factory=dict)
+    lastAnswer: dict[str, Any] = Field(default_factory=dict)
 
 
 class InterviewContextPayload(BaseModel):
@@ -468,6 +474,15 @@ def _simple_similarity(a: str, b: str) -> float:
     return len(wa & wb) / max(1, len(wa | wb))
 
 
+def _looks_garbled_transcript(text: str) -> bool:
+    words = re.findall(r"[a-zA-Z0-9]+", (text or "").lower())
+    if len(words) < 3:
+        return True
+    common = {"saya", "aku", "pernah", "membuat", "menggunakan", "project", "proyek", "magang", "data", "role", "ai", "engineer", "backend", "frontend", "computer", "vision", "dashboard", "sql", "python", "java", "javascript", "model", "aplikasi", "tim", "hasil", "dampak", "pengalaman"}
+    known_ratio = sum(1 for word in words if word in common or len(word) <= 3) / max(1, len(words))
+    return len(words) >= 8 and known_ratio < 0.16
+
+
 def _find_repeated_question(question: str, memory: dict[str, Any]) -> dict[str, Any] | None:
     for item in memory.get("asked_question_history", []) or []:
         old = item.get("question_text", "")
@@ -475,6 +490,53 @@ def _find_repeated_question(question: str, memory: dict[str, Any]) -> dict[str, 
             return item
     return None
 
+
+
+def _extract_answer_anchors(answer_memory: dict[str, Any]) -> dict[str, Any]:
+    transcript = _safe_text(answer_memory.get("transcript_text") or answer_memory.get("transcriptText") or answer_memory.get("answer_text") or answer_memory.get("answerText"))
+    mentioned_tools = answer_memory.get("mentioned_tools") or answer_memory.get("mentionedTools") or []
+    anchor_phrases = answer_memory.get("anchor_phrases") or answer_memory.get("anchorPhrases") or []
+
+    if not mentioned_tools:
+        tech_terms = re.findall(r"\b(?:looker studio|google data studio|power bi|tableau|excel|sql|python|javascript|next\.js|react|fastapi|node\.js|express|tensorflow|pytorch|opencv|computer vision|machine learning|api|dashboard)\b", transcript, flags=re.IGNORECASE)
+        mentioned_tools = list(dict.fromkeys(term.strip() for term in tech_terms if term.strip()))
+
+    if not anchor_phrases and transcript:
+        patterns = [
+            r"(?:menggunakan|memakai|pakai|dengan)\s+[^.,;]{3,50}",
+            r"(?:project|proyek|magang|aplikasi|dashboard|model|sistem)\s+[^.,;]{3,60}",
+            r"(?:meningkat|mengurangi|mempercepat|mendeteksi|membangun|membuat|mengembangkan)\s+[^.,;]{3,60}",
+        ]
+        for pattern in patterns:
+            for match in re.findall(pattern, transcript, flags=re.IGNORECASE):
+                anchor_phrases.append(match.strip()[:90])
+    def useful_anchor(value: Any) -> str | None:
+        clean = re.sub(r"\s+", " ", str(value or "").strip(" .,:;!?\"'"))
+        lower = clean.lower()
+        generic = {"dengan tim", "dalam tim", "sama tim", "ini sama", "ini sama sih", "ini juga", "ini juga sih", "tim", "role", "posisi"}
+        if not clean or lower in generic or lower.startswith(("dengan ", "sama ", "yang ", "untuk ")):
+            return None
+        words = re.findall(r"[a-zA-Z0-9.+#-]+", lower)
+        meaningful = [w for w in words if w not in {"yang", "dan", "atau", "dengan", "untuk", "saya", "aku", "kami", "kita", "ini", "itu"} and len(w) > 2]
+        if len(clean) < 8 or not meaningful:
+            return None
+        return clean[:90]
+
+    cleaned_tools = list(dict.fromkeys([str(x).strip() for x in mentioned_tools if str(x).strip()]))[:6]
+    cleaned_anchors = []
+    for anchor in anchor_phrases:
+        cleaned = useful_anchor(anchor)
+        if cleaned and cleaned.lower() not in {item.lower() for item in cleaned_anchors}:
+            cleaned_anchors.append(cleaned)
+
+    return {
+        "transcript_excerpt": transcript[:700],
+        "mentioned_tools": cleaned_tools,
+        "anchor_phrases": cleaned_anchors[:5],
+        "evidence_level": answer_memory.get("evidence_level") or answer_memory.get("evidenceLevel"),
+        "score": answer_memory.get("score") or answer_memory.get("answer_score") or answer_memory.get("answerScore"),
+        "detected_weaknesses": answer_memory.get("detected_weaknesses") or answer_memory.get("detectedWeaknesses") or [],
+    }
 
 def _generated_from(memory: dict[str, Any]) -> str:
     if memory.get("retry_mode"):
@@ -615,13 +677,28 @@ def _skill_evidence_from_text(skills: list[str], raw_text: str, source: str) -> 
 
 
 def _achievement_signals(raw_text: str) -> list[str]:
-    signals = []
-    for sent in [s.strip() for s in raw_text.replace("\n", ". ").split(".") if s.strip()]:
+    signals: list[str] = []
+    impact_keywords = [
+        "meningkat", "mengurangi", "mempercepat", "akurasi", "efisiensi", "hemat", "hasil", "dampak",
+        "improved", "reduced", "increased", "optimized", "automated", "delivered", "achieved", "solved", "impact",
+    ]
+    action_keywords = [
+        "membuat", "membangun", "mengembangkan", "menganalisis", "memimpin", "bertanggung jawab", "mengimplementasikan",
+        "built", "created", "developed", "implemented", "analyzed", "designed", "led", "managed", "collaborated",
+    ]
+    evidence_keywords = [
+        "project", "proyek", "magang", "internship", "dashboard", "model", "api", "website", "application", "aplikasi",
+        "computer vision", "data", "client", "team", "tim", "company", "perusahaan",
+    ]
+    for sent in [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", raw_text or "") if s.strip()]:
         lower = sent.lower()
-        if any(k in lower for k in ["meningkat", "mengurangi", "mempercepat", "akurasi", "efisiensi", "%", "persen", "hasil", "dampak"]):
+        has_metric = bool(re.search(r"\b\d+(?:[.,]\d+)?\s*(?:%|persen|jam|menit|hari|bulan|tahun|x)?\b", lower))
+        has_impact = any(k in lower for k in impact_keywords)
+        has_action = any(k in lower for k in action_keywords)
+        has_evidence = any(k in lower for k in evidence_keywords)
+        if (has_impact or has_metric or (has_action and has_evidence)) and len(sent.split()) >= 7:
             signals.append(sent[:180])
-    return signals[:5]
-
+    return list(dict.fromkeys(signals))[:5]
 
 def _profile_completeness(skills: list[str], tools: list[str], summary: str, evidence_items: list[Any]) -> int:
     score = 0
@@ -640,15 +717,22 @@ def _create_profile_context(raw_text: str, source: str, target_role: str | None 
     if not raw_text.strip():
         raise HTTPException(status_code=400, detail="PROFILE_CONTEXT_REQUIRED")
     role_for_formalize = target_role or "profesional"
-    skills = normalize_skills(extract_skills(raw_text))
-    tools = skills[:]  # MVP: taxonomy belum memisahkan skill/tool secara eksplisit
-    professional_profile = formalize_narrative(raw_text, role=role_for_formalize)
-    summary = professional_profile.get("professional_summary") or raw_text[:450]
-    experience = extract_experience_summary(raw_text)
+    extraction_text = remove_cv_header_and_contact(raw_text) or raw_text
+    extracted_skills = normalize_skills(extract_skills(extraction_text))
+    skills, tools = split_skills_and_tools(extraction_text, extracted_skills)
+    professional_profile = (
+        formalize_narrative(extraction_text, role=role_for_formalize)
+        if USE_GENAI_FOR_PROFILE_EXTRACTION
+        else {}
+    )
+    summary = extract_profile_summary(raw_text, professional_profile.get("professional_summary"))
+    if not summary:
+        summary = "Tuliskan ringkasan singkat tentang fokus karier, pengalaman paling relevan, dan kontribusi yang ingin kamu tonjolkan saat interview."
+    experience = extract_experience_summary(extraction_text)
     evidence_items = experience if isinstance(experience, list) else [str(experience)]
-    evidence_score = calculate_initial_evidence_score(raw_text, skills)
-    skill_evidence = _skill_evidence_from_text(skills, raw_text, source)
-    achievement_signals = _achievement_signals(raw_text)
+    evidence_score = calculate_initial_evidence_score(extraction_text, skills + tools)
+    skill_evidence = _skill_evidence_from_text(skills + tools, extraction_text, source)
+    achievement_signals = _achievement_signals(extraction_text)
     completeness = _profile_completeness(skills, tools, summary, skill_evidence or evidence_items)
     ai_confidence = max(50, min(95, int((evidence_score + completeness) / 2)))
     meta = get_role_family_for_role(target_role) if target_role else None
@@ -660,7 +744,7 @@ def _create_profile_context(raw_text: str, source: str, target_role: str | None 
         "domain": (meta or {}).get("domain"),
         "role_family": (meta or {}).get("role_family"),
         "raw_text": raw_text,
-        "cleaned_text": clean_text(raw_text),
+        "cleaned_text": clean_text(extraction_text),
         "professional_summary": summary,
         "skills": skills,
         "tools": tools,
@@ -834,7 +918,7 @@ async def roles_list():
 
 
 # --------------------------------------------------------------------------- #
-# 9.1 AI EXTRACT CV PROFILE — Upload CV path, role may be unknown
+# 9.1 AI EXTRACT CV PROFILE â€” Upload CV path, role may be unknown
 # --------------------------------------------------------------------------- #
 @app.post("/v1/profile/extract-cv", tags=["Profile Extraction"])
 @app.post("/v1/context/extract-cv", tags=["Context", "Backward Compatible"])
@@ -854,7 +938,7 @@ async def extract_cv_profile(
 
 
 # --------------------------------------------------------------------------- #
-# 9.2 AI EXTRACT MANUAL PROFILE — Manual path already has selected role
+# 9.2 AI EXTRACT MANUAL PROFILE â€” Manual path already has selected role
 # --------------------------------------------------------------------------- #
 @app.post("/v1/profile/extract-manual", tags=["Profile Extraction"])
 @app.post("/v1/context/extract-profile", tags=["Context", "Backward Compatible"])
@@ -883,7 +967,7 @@ async def extract_manual_profile(body: ExtractManualProfileRequest):
 
 
 # --------------------------------------------------------------------------- #
-# 9.3 AI GENERATE ROLE FIT RANKING — CV path only, but AI service stateless
+# 9.3 AI GENERATE ROLE FIT RANKING â€” CV path only, but AI service stateless
 # --------------------------------------------------------------------------- #
 @app.post("/v1/role-fit/generate-ranking", tags=["Role Fit"])
 async def generate_role_fit_ranking(body: RoleFitRankingRequest):
@@ -917,7 +1001,7 @@ async def generate_role_fit_ranking(body: RoleFitRankingRequest):
 
 
 # --------------------------------------------------------------------------- #
-# 9.4 AI CALCULATE ROLE FIT SCORE — CV and manual path
+# 9.4 AI CALCULATE ROLE FIT SCORE â€” CV and manual path
 # --------------------------------------------------------------------------- #
 @app.post("/v1/role-fit/calculate-score", tags=["Role Fit"])
 @app.post("/v1/role-fit/score", tags=["Role Fit", "Backward Compatible"])
@@ -965,7 +1049,7 @@ async def build_interview_context(body: BuildInterviewContextRequest):
 
 
 # --------------------------------------------------------------------------- #
-# 9.6 AI GENERATE INTERVIEW QUESTION — first question must be introduction
+# 9.6 AI GENERATE INTERVIEW QUESTION - first question must be introduction
 # --------------------------------------------------------------------------- #
 @app.post("/v1/interview/generate-question", tags=["Interview Engine"])
 @app.post("/v1/interview/next-question", tags=["Interview Engine", "Backward Compatible"])
@@ -987,12 +1071,13 @@ async def next_question(body: NextQuestionRequest):
     state = _model_dump(body.session_state)
     memory = _normalize_adaptive_memory(body.adaptive_practice_memory or body.adaptivePracticeMemory)
     practice_mode = body.practice_mode or body.practiceMode or state.get("practice_mode") or state.get("practiceMode") or ("adaptive_from_history" if memory.get("enabled") else "first_session")
+    answer_memory = _extract_answer_anchors(state.get("last_answer") or state.get("lastAnswer") or {})
     question_order = int(state.get("current_question_index") or state.get("question_index") or 1)
     total_questions = int(state.get("question_count") or state.get("total_main_questions") or MAX_MAIN_QUESTIONS)
     total_questions = max(MIN_MAIN_QUESTIONS, min(MAX_MAIN_QUESTIONS, total_questions))
     asked_questions = _asked_question_texts(memory, state)
     first_required = bool(state.get("first_question_required", True))
-    generated_from = _generated_from(memory)
+    generated_from = "answer_memory" if answer_memory.get("transcript_excerpt") else _generated_from(memory)
 
     if first_required and question_order <= 1 and not (state.get("asked_questions") or []):
         return {
@@ -1023,6 +1108,7 @@ async def next_question(body: NextQuestionRequest):
         "target_competency_override": competency_target,
         "adaptive_memory": memory,
         "practice_mode": practice_mode,
+        "answer_memory": answer_memory,
     }
     competency_map = body.competency_map if body.competency_map else ds_get_competency_map()
     question_seed = body.question_seed if body.question_seed else ds_get_question_seed()
@@ -1036,13 +1122,19 @@ async def next_question(body: NextQuestionRequest):
     )
     question_text = generated.get("question") or _adaptive_fallback_question(role_name, competency_target, memory)
 
-    repeated = _find_repeated_question(question_text, memory)
+    dedupe_memory = {
+        **memory,
+        "asked_question_history": list(memory.get("asked_question_history", []) or []) + [
+            {"question_id": f"current_{idx}", "question_text": asked_text}
+            for idx, asked_text in enumerate(asked_questions)
+        ],
+    }
+    repeated = _find_repeated_question(question_text, dedupe_memory)
     if repeated and memory.get("avoid_repeated_questions", True) and not memory.get("retry_mode", False):
         question_text = _adaptive_fallback_question(role_name, competency_target, memory)
-        repeated = _find_repeated_question(question_text, memory)
+        repeated = _find_repeated_question(question_text, dedupe_memory)
         if repeated:
-            # Last safety rewrite to block exact repetition.
-            question_text = f"Berikan contoh pengalaman lain untuk posisi {role_name} yang belum kamu ceritakan sebelumnya. Jelaskan konteks, aksi, tools, kontribusi pribadi, dan hasilnya."
+            question_text = f"Berikan contoh pengalaman lain untuk posisi {role_name} yang belum kamu ceritakan sebelumnya. Jelaskan konteks, aksi, kontribusi pribadi, dampak, dan hasil terukurnya jika ada."
             repeated = None
 
     return {
@@ -1055,14 +1147,13 @@ async def next_question(body: NextQuestionRequest):
         "generated_from": generated_from,
         "repeated_from_question_id": repeated.get("question_id") if repeated and memory.get("retry_mode") else None,
         "hrd_state": "asking",
-        "reason": "Pertanyaan diarahkan dari practice memory." if generated_from != "role_context" else "Pertanyaan diarahkan dari role context dan interview state.",
+        "reason": "Pertanyaan diarahkan dari jawaban terakhir." if generated_from == "answer_memory" else ("Pertanyaan diarahkan dari practice memory." if generated_from != "role_context" else "Pertanyaan diarahkan dari role context dan interview state."),
         "practice_mode": practice_mode,
         "recording_policy": _recording_policy(),
     }
 
 
-# --------------------------------------------------------------------------- #
-# 9.7 AI SPEECH-TO-TEXT — maxDurationSeconds 90, no silence auto-stop
+# --------------------------------------------------------------------------- ## 9.7 AI SPEECH-TO-TEXT â€” maxDurationSeconds 90, no silence auto-stop
 # --------------------------------------------------------------------------- #
 @app.post("/v1/stt/transcribe", tags=["Speech-to-Text"])
 async def transcribe_audio(
@@ -1098,7 +1189,7 @@ async def transcribe_audio(
         if confidence is None:
             confidence = 0.94 if len(transcript.split()) >= 8 else (0.80 if len(transcript.split()) >= 4 else 0.50)
         confidence = round(float(confidence), 2)
-        needs_clarification = confidence < STT_LOW_CONFIDENCE_THRESHOLD or len(transcript.split()) < 3
+        needs_clarification = confidence < STT_LOW_CONFIDENCE_THRESHOLD or len(transcript.split()) < 3 or _looks_garbled_transcript(transcript)
         return {
             "status": "success",
             "transcript_text": transcript,
@@ -1152,7 +1243,7 @@ async def evaluate_answer(body: EvaluateAnswerRequest):
     if int(state.get("clarification_count") or 0) >= int(state.get("max_clarification") or MAX_CLARIFICATION_PER_SESSION):
         needs_clarification = False
         clarification_type = None
-    if stt_confidence is not None and stt_confidence < STT_LOW_CONFIDENCE_THRESHOLD:
+    if (stt_confidence is not None and stt_confidence < STT_LOW_CONFIDENCE_THRESHOLD) or _looks_garbled_transcript(transcript):
         needs_clarification = True
         clarification_type = "unclear_audio"
         if "unclear_audio" not in weaknesses:
@@ -1298,7 +1389,7 @@ async def generate_interview_result(body: GenerateResultRequest):
 
 
 # --------------------------------------------------------------------------- #
-# 9.11 AI PREDICT ANSWER QUALITY — TensorFlow supporting model
+# 9.11 AI PREDICT ANSWER QUALITY â€” TensorFlow supporting model
 # --------------------------------------------------------------------------- #
 @app.post("/v1/model/predict-answer-quality", tags=["Model"])
 async def predict_answer_quality_endpoint(body: ModelPredictRequest):
@@ -1321,7 +1412,7 @@ async def predict_answer_quality_endpoint(body: ModelPredictRequest):
 
 
 # --------------------------------------------------------------------------- #
-# 9.12 DASHBOARD CAREER SUMMARY — unlocked when score >= 90
+# 9.12 DASHBOARD CAREER SUMMARY â€” unlocked when score >= 90
 # --------------------------------------------------------------------------- #
 @app.post("/v1/dashboard/generate-summary", tags=["Dashboard"])
 async def generate_dashboard_summary(body: DashboardSummaryRequest):
@@ -1407,3 +1498,18 @@ async def model_evaluation_report(dataset: str = "test", include_predictions: bo
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

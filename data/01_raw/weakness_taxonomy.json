@@ -1,0 +1,104 @@
+{
+   "context_missing": {
+    "tag_name": "context_missing",
+    "description": "Jawaban belum menjelaskan konteks proyek, masalah, atau situasi.",
+    "clarification_type": "context",
+    "template": "Bisa jelaskan konteks proyek atau masalah yang sedang kamu hadapi saat itu?"
+  },
+  "contribution_unclear": {
+    "tag_name": "contribution_unclear",
+    "description": "Kontribusi pribadi kandidat belum jelas.",
+    "clarification_type": "contribution",
+    "template": "Bagian mana yang kamu kerjakan sendiri dalam pengalaman tersebut?"
+  },
+  "tools_missing": {
+    "tag_name": "tools_missing",
+    "description": "Tools, teknologi, metode, atau framework belum disebutkan.",
+    "clarification_type": "tools",
+    "template": "Tools atau teknologi apa yang kamu gunakan untuk menyelesaikan pekerjaan itu?"
+  },
+  "impact_missing": {
+    "tag_name": "impact_missing",
+    "description": "Jawaban belum menyebutkan hasil, dampak, atau perubahan yang terjadi.",
+    "clarification_type": "impact",
+    "template": "Apa hasil atau dampak dari pekerjaan yang kamu lakukan?"
+  },
+  "measurable_result_missing": {
+    "tag_name": "measurable_result_missing",
+    "description": "Jawaban belum memiliki hasil terukur seperti angka, persentase, waktu, error reduction, atau coverage.",
+    "clarification_type": "metric",
+    "template": "Apakah ada angka atau metrik yang bisa menunjukkan keberhasilan pekerjaanmu?"
+  },
+  "star_structure_missing": {
+    "tag_name": "star_structure_missing",
+    "description": "Jawaban belum tersusun dengan STAR: Situation, Task, Action, Result.",
+    "clarification_type": "structure",
+    "template": "Bisa ceritakan urutannya dari situasi, tugasmu, aksi yang kamu lakukan, sampai hasilnya?"
+  },
+  "role_relevance_low": {
+    "tag_name": "role_relevance_low",
+    "description": "Jawaban kurang relevan dengan target role yang dipilih.",
+    "clarification_type": "role_relevance",
+    "template": "Bagaimana pengalaman itu berhubungan dengan role yang kamu targetkan?"
+  },
+  "technical_detail_missing": {
+    "tag_name": "technical_detail_missing",
+    "description": "Penjelasan teknis masih terlalu umum.",
+    "clarification_type": "technical",
+    "template": "Bisa jelaskan detail teknis atau pendekatan yang kamu gunakan?"
+  },
+  "communication_unclear": {
+    "tag_name": "communication_unclear",
+    "description": "Jawaban sulit dipahami, terlalu loncat, atau kurang ringkas.",
+    "clarification_type": "clarity",
+    "template": "Bisa jelaskan ulang dengan lebih terstruktur dan singkat?"
+  },
+  "self_awareness_missing": {
+    "tag_name": "self_awareness_missing",
+    "description": "Jawaban belum menunjukkan pembelajaran, refleksi, atau perbaikan diri.",
+    "clarification_type": "reflection",
+    "template": "Apa yang kamu pelajari dari pengalaman tersebut dan apa yang akan kamu perbaiki?"
+  },
+  "security_awareness_missing": {
+    "tag_name": "security_awareness_missing",
+    "description": "Untuk role infra/security, jawaban belum mempertimbangkan risiko keamanan.",
+    "clarification_type": "security",
+    "template": "Apakah ada risiko keamanan atau kontrol yang kamu pertimbangkan?"
+  },
+  "testing_coverage_missing": {
+    "tag_name": "testing_coverage_missing",
+    "description": "Untuk role tester/dev, cakupan testing belum jelas.",
+    "clarification_type": "coverage",
+    "template": "Bagaimana kamu memastikan test coverage atau skenario uji sudah cukup?"
+  },
+  "deployment_missing": {
+    "tag_name": "deployment_missing",
+    "description": "Untuk role engineering, proses deployment atau delivery belum dijelaskan.",
+    "clarification_type": "deployment",
+    "template": "Bagaimana proses deployment atau delivery dari pekerjaan tersebut?"
+  },
+  "mobile_platform_detail_missing": {
+    "tag_name": "mobile_platform_detail_missing",
+    "description": "Untuk role mobile, platform, lifecycle, atau device constraint belum jelas.",
+    "clarification_type": "platform",
+    "template": "Platform mobile, device constraint, atau lifecycle apa yang kamu pertimbangkan?"
+  },
+  "backend_architecture_unclear": {
+    "tag_name": "backend_architecture_unclear",
+    "description": "Untuk role backend, penjelasan skema database, API, atau optimasi belum jelas.",
+    "clarification_type": "architecture",
+    "template": "Bisa jelaskan arsitektur database atau desain API yang kamu gunakan pada sistem tersebut?"
+  },
+  "model_evaluation_missing": {
+    "tag_name": "model_evaluation_missing",
+    "description": "Untuk role Data/AI/ML, metrik evaluasi model belum dipaparkan.",
+    "clarification_type": "evaluation",
+    "template": "Metrik evaluasi apa yang kamu gunakan untuk mengukur performa model tersebut?"
+  },
+  "data_processing_unclear": {
+    "tag_name": "data_processing_unclear",
+    "description": "Untuk role Data, tahapan eksplorasi atau pembersihan data belum dijelaskan.",
+    "clarification_type": "data_processing",
+    "template": "Bisa ceritakan proses eksplorasi atau pembersihan data yang kamu lakukan sebelum masuk ke analisis?"
+  }
+}
