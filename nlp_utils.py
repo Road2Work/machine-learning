@@ -1,8 +1,8 @@
-"""
-nlp_utils.py — NLP Preprocessing & Context Extraction Pipeline
+﻿"""
+nlp_utils.py â€” NLP Preprocessing & Context Extraction Pipeline
 Road2Work AI | CC26-PSU050
 
-v1.1.0 — connected to Data Science resources
+v1.1.0 â€” connected to Data Science resources
 - Membaca skill_taxonomy.json dari data_science_resources/ atau env SKILL_TAXONOMY_PATH.
 - Bisa membaca format taxonomy DS yang nested per role_family.
 - Skill dari role_skill_matrix.json selalu dijadikan canonical identity agar role-fit tidak rusak.
@@ -52,7 +52,7 @@ _TAXONOMY_FALLBACK: dict[str, list[str]] = {
     "nlp": ["natural language processing", "text mining", "text classification"],
     "deep learning": ["dl", "neural network", "ann", "cnn", "rnn", "lstm"],
     "machine learning": ["ml", "supervised learning", "unsupervised learning"],
-    "generative ai": ["genai", "llm", "large language model", "gpt", "gemini", "claude"],
+    "generative ai": ["genai", "llm", "large language model", "prompt engineering"],
     "data analysis": ["analisis data", "data analyst", "exploratory data analysis", "eda"],
     "data visualization": ["visualisasi data", "matplotlib", "seaborn", "plotly", "tableau", "power bi", "dashboard"],
     "data wrangling": ["data cleaning", "data preprocessing", "pembersihan data", "data cleansing"],
@@ -151,10 +151,10 @@ def reload_taxonomy(path: str | None = None) -> str:
             loaded = _TAXONOMY_FALLBACK
         SKILL_TAXONOMY = loaded
         _ALIAS_TO_CANONICAL = _build_alias_index(SKILL_TAXONOMY)
-        print(f"[nlp_utils] ✅ Taxonomy aktif ({len(_ALIAS_TO_CANONICAL)} alias, {len(_ROLE_MATRIX_SKILLS)} role skills).")
+        print(f"[nlp_utils] âœ… Taxonomy aktif ({len(_ALIAS_TO_CANONICAL)} alias, {len(_ROLE_MATRIX_SKILLS)} role skills).")
         return "json" if loaded is not _TAXONOMY_FALLBACK else "fallback"
     except Exception as exc:
-        print(f"[nlp_utils] ⚠️ Gagal load taxonomy DS: {exc}. Pakai fallback.")
+        print(f"[nlp_utils] âš ï¸ Gagal load taxonomy DS: {exc}. Pakai fallback.")
         SKILL_TAXONOMY = _TAXONOMY_FALLBACK.copy()
         _ALIAS_TO_CANONICAL = _build_alias_index(SKILL_TAXONOMY)
         return "fallback"
@@ -208,13 +208,208 @@ def normalize_skills(skills: list[str]) -> list[str]:
     return normalized
 
 
+
+_CONTACT_OR_HEADER_RE = re.compile(
+    r"(\b[\w.+-]+@[\w.-]+\.\w+\b|https?://|www\.|linkedin\.com|github\.com|\+?\d[\d\s().-]{7,}|\bdepok\b|\bjakarta\b|\bbandung\b)",
+    re.IGNORECASE,
+)
+_SECTION_HEADING_RE = re.compile(
+    r"^(about|about me|profile|professional profile|professional summary|summary|objective|ringkasan|profil|tentang saya|pengalaman|experience|projects?|project experience|education|skills?|tools?|achievement|achievements?|pencapaian)\s*:?$",
+    re.IGNORECASE,
+)
+_SUMMARY_HEADING_RE = re.compile(
+    r"^(about|about me|profile|professional profile|professional summary|summary|objective|ringkasan|profil|tentang saya)\s*:?$",
+    re.IGNORECASE,
+)
+_NEXT_SECTION_RE = re.compile(
+    r"^(experience|pengalaman|projects?|project experience|education|pendidikan|skills?|tools?|achievement|achievements?|pencapaian|certifications?|sertifikasi|organizations?|organisasi)\s*:?$",
+    re.IGNORECASE,
+)
+_TOOL_ALIASES: dict[str, list[str]] = {
+    "python": ["python", "python3"],
+    "javascript": ["javascript", "js"],
+    "typescript": ["typescript", "ts"],
+    "java": ["java"],
+    "sql": ["sql", "mysql", "postgresql", "postgres", "sql server", "sqlite", "bigquery"],
+    "excel": ["excel", "microsoft excel", "spreadsheet"],
+    "tableau": ["tableau"],
+    "power bi": ["power bi", "powerbi"],
+    "google looker studio": ["google looker studio", "looker studio", "looker"],
+    "pandas": ["pandas"],
+    "numpy": ["numpy"],
+    "scikit-learn": ["scikit-learn", "scikit learn", "sklearn"],
+    "tensorflow": ["tensorflow", "keras"],
+    "pytorch": ["pytorch", "torch"],
+    "opencv": ["opencv", "open cv", "cv2"],
+    "matplotlib": ["matplotlib"],
+    "seaborn": ["seaborn"],
+    "plotly": ["plotly"],
+    "react": ["react", "react.js", "reactjs"],
+    "next.js": ["next.js", "nextjs", "next js"],
+    "node.js": ["node.js", "nodejs", "node"],
+    "express": ["express", "express.js", "expressjs"],
+    "fastapi": ["fastapi", "fast api"],
+    "docker": ["docker"],
+    "kubernetes": ["kubernetes", "k8s"],
+    "git": [" git ", "gitlab", "version control"],
+    "figma": ["figma"],
+    "tailwind": ["tailwind", "tailwind css"],
+}
+_TOOL_CANONICALS = set(_TOOL_ALIASES.keys())
+_CONCEPT_SKILLS = {
+    "data visualization",
+    "data analysis",
+    "data wrangling",
+    "machine learning",
+    "deep learning",
+    "natural language processing",
+    "computer vision",
+    "statistics",
+    "statistical analysis",
+    "problem solving",
+    "communication",
+    "teamwork",
+    "frontend",
+    "backend",
+    "database",
+    "rest api",
+    "generative ai",
+    "mlops",
+}
+_VISUALIZATION_TOOLS = {"tableau", "power bi", "google looker studio", "matplotlib", "seaborn", "plotly"}
+_DATA_TOOLS = {"python", "sql", "excel", "pandas", "numpy", "scikit-learn"}
+
+
+def _dedupe_keep_order(items: list[str], limit: int | None = None) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in items or []:
+        value = str(item).strip().lower()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+        if limit and len(result) >= limit:
+            break
+    return result
+
+
+def _is_noise_line(line: str) -> bool:
+    clean = line.strip(" -\\u2022\\t|,")
+    if not clean:
+        return True
+    if _CONTACT_OR_HEADER_RE.search(clean):
+        return True
+    letters = re.sub(r"[^A-Za-z]", "", clean)
+    if len(clean) <= 95 and len(letters) >= 8 and clean.upper() == clean and not _SECTION_HEADING_RE.match(clean):
+        return True
+    if len(clean.split()) <= 4 and not _SECTION_HEADING_RE.match(clean):
+        return True
+    return False
+
+
+def remove_cv_header_and_contact(raw_text: str) -> str:
+    """Buang header identitas/kontak agar extraction tidak salah membaca headline CV."""
+    lines = [line.strip() for line in (raw_text or "").replace("\r", "\n").split("\n")]
+    cleaned: list[str] = []
+    for index, line in enumerate(lines):
+        if not line:
+            continue
+        if _CONTACT_OR_HEADER_RE.search(line):
+            continue
+        # Bagian 8 baris pertama biasanya nama, headline, lokasi, kontak. Jangan jadikan sumber skill/summary.
+        if index < 8 and _is_noise_line(line):
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned).strip()
+
+
+def _compact_summary(text: str, max_chars: int = 700) -> str:
+    compact = re.sub(r"\s+", " ", text or "").strip(" -•\t|")
+    compact = _CONTACT_OR_HEADER_RE.sub("", compact)
+    compact = re.sub(r"\s+", " ", compact).strip(" -•\t|")
+    if len(compact) <= max_chars:
+        return compact
+    return compact[:max_chars].rsplit(" ", 1)[0].strip() + "..."
+
+
+def extract_profile_summary(raw_text: str, ai_summary: str | None = None) -> str:
+    """Ambil About/Profile/Summary dari CV, bukan header nama/kontak."""
+    lines = [line.strip() for line in (raw_text or "").replace("\r", "\n").split("\n") if line.strip()]
+    for index, line in enumerate(lines):
+        if not _SUMMARY_HEADING_RE.match(line):
+            continue
+        collected: list[str] = []
+        for next_line in lines[index + 1:]:
+            if _NEXT_SECTION_RE.match(next_line):
+                break
+            if _is_noise_line(next_line):
+                continue
+            collected.append(next_line)
+            if len(" ".join(collected)) >= 450:
+                break
+        candidate = _compact_summary(" ".join(collected))
+        if len(candidate.split()) >= 12:
+            return candidate
+
+    if ai_summary and not _is_noise_line(ai_summary):
+        candidate = _compact_summary(ai_summary)
+        if len(candidate.split()) >= 12:
+            return candidate
+
+    searchable = remove_cv_header_and_contact(raw_text)
+    paragraphs = [p.strip() for p in re.split(r"\n{2,}|(?<=[.!?])\s+", searchable) if p.strip()]
+    for paragraph in paragraphs:
+        if _is_noise_line(paragraph):
+            continue
+        candidate = _compact_summary(paragraph)
+        if len(candidate.split()) >= 12:
+            return candidate
+    return ""
+
+
+def extract_tools(raw_text: str, extracted_skills: list[str] | None = None) -> list[str]:
+    searchable = f" {remove_cv_header_and_contact(raw_text).lower()} "
+    tools: list[str] = []
+    for canonical, aliases in _TOOL_ALIASES.items():
+        for alias in aliases:
+            if alias.strip() == "git":
+                pattern = r"(?<![a-z0-9])git(?![a-z0-9])"
+            else:
+                pattern = rf"(?<![a-z0-9]){re.escape(alias.strip().lower())}(?![a-z0-9])"
+            if re.search(pattern, searchable):
+                tools.append(canonical)
+                break
+    for skill in extracted_skills or []:
+        key = _safe_lower(skill)
+        if key in _TOOL_CANONICALS:
+            tools.append(key)
+    return _dedupe_keep_order(tools, limit=12)
+
+
+def split_skills_and_tools(raw_text: str, extracted_skills: list[str]) -> tuple[list[str], list[str]]:
+    tools = extract_tools(raw_text, extracted_skills)
+    skills: list[str] = []
+    for skill in extracted_skills or []:
+        key = _safe_lower(skill)
+        if not key or key in _TOOL_CANONICALS:
+            continue
+        skills.append(key)
+    if _VISUALIZATION_TOOLS.intersection(tools):
+        skills.append("data visualization")
+    if _DATA_TOOLS.intersection(tools):
+        skills.append("data analysis")
+    if {"tensorflow", "pytorch", "scikit-learn", "opencv"}.intersection(tools):
+        skills.append("machine learning")
+    return _dedupe_keep_order(skills, limit=12), _dedupe_keep_order(tools, limit=12)
+
 def formalize_experience(raw_text: str) -> str:
     if not raw_text or not raw_text.strip():
         return ""
     sentences = re.split(r"(?<=[.!?])\s+|\n+", raw_text.strip())
     bullets = []
     for sentence in sentences:
-        cleaned = sentence.strip(" -•\t")
+        cleaned = sentence.strip(" -\\u2022\\t")
         if len(cleaned) >= 15:
             bullets.append(f"- {cleaned}")
         if len(bullets) >= 5:
@@ -273,7 +468,7 @@ def extract_experience_summary(text: str, max_items: int = 5) -> list[str]:
     sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
     selected: list[str] = []
     for sentence in sentences:
-        clean = sentence.strip(" -•\t")
+        clean = sentence.strip(" -\\u2022\\t")
         if len(clean) < 15:
             continue
         if any(k in clean.lower() for k in keywords):
@@ -287,7 +482,8 @@ def extract_from_short_profile(profile_text: str, target_role: str = "posisi yan
     if not isinstance(profile_text, str) or not profile_text.strip():
         raise ValueError("Profil singkat tidak boleh kosong.")
     raw_text = profile_text.strip()
-    skills = normalize_skills(extract_skills(raw_text))
+    extracted_skills = normalize_skills(extract_skills(raw_text))
+    skills, tools = split_skills_and_tools(raw_text, extracted_skills)
     evidence_signals = extract_evidence_signals(raw_text)
     experience_summary = extract_experience_summary(raw_text)
     profile_summary = raw_text if len(raw_text) <= 800 else raw_text[:800].rsplit(" ", 1)[0] + "..."
@@ -297,15 +493,23 @@ def extract_from_short_profile(profile_text: str, target_role: str = "posisi yan
         "raw_text": raw_text,
         "cleaned_text": clean_text(raw_text),
         "skills": skills,
-        "tools": skills,
+        "tools": tools,
         "experience_summary": experience_summary,
         "profile_summary": profile_summary,
         "evidence_signals": evidence_signals,
-        "initial_evidence_score": calculate_initial_evidence_score(raw_text, skills),
+        "initial_evidence_score": calculate_initial_evidence_score(raw_text, skills + tools),
     }
-
 
 if __name__ == "__main__":
     sample = "Saya membuat dashboard penjualan menggunakan Python, SQL, Pandas, dan Power BI. Dashboard ini meningkatkan efisiensi laporan 30%."
     print("Taxonomy source:", _taxonomy_source)
     print(extract_from_short_profile(sample, target_role="Data Analyst"))
+
+
+
+
+
+
+
+
+

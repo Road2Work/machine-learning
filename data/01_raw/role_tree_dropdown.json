@@ -1,0 +1,62 @@
+{
+  "domains": [
+    {
+      "id": "domain_information_technology",
+      "name": "Information & Technology",
+      "description": "Domain pekerjaan yang berhubungan dengan data, AI, cloud, security, web, mobile, dan quality assurance software.",
+      "role_families": [
+        {
+          "id": "family_data_ai",
+          "name": "Data & AI",
+          "description": "Role yang berhubungan dengan analisis data, machine learning, AI system, dan model development.",
+          "target_roles": [
+            { "id": "role_data_analyst", "name": "Data Analyst", "description": "Target role Data Analyst dalam family Data & AI." },
+            { "id": "role_data_scientist", "name": "Data Scientist", "description": "Target role Data Scientist dalam family Data & AI." },
+            { "id": "role_ai_engineer", "name": "AI Engineer", "description": "Target role AI Engineer dalam family Data & AI." },
+            { "id": "role_ml_engineer", "name": "ML Engineer", "description": "Target role ML Engineer dalam family Data & AI." }
+          ]
+        },
+        {
+          "id": "family_infra_cloud_security",
+          "name": "Infrastructure, Cloud & Security",
+          "description": "Role yang berhubungan dengan infrastruktur, cloud deployment, DevOps, monitoring, dan keamanan sistem.",
+          "target_roles": [
+            { "id": "role_cloud_engineer", "name": "Cloud Engineer", "description": "Target role Cloud Engineer dalam family Infrastructure, Cloud & Security." },
+            { "id": "role_devops_engineer", "name": "DevOps Engineer", "description": "Target role DevOps Engineer dalam family Infrastructure, Cloud & Security." },
+            { "id": "role_cybersecurity_analyst", "name": "Cybersecurity Analyst", "description": "Target role Cybersecurity Analyst dalam family Infrastructure, Cloud & Security." }
+          ]
+        },
+        {
+          "id": "family_web_development",
+          "name": "Web Development",
+          "description": "Role yang berhubungan dengan pengembangan aplikasi web frontend, backend, dan full-stack.",
+          "target_roles": [
+            { "id": "role_frontend_developer", "name": "Frontend Developer", "description": "Target role Frontend Developer dalam family Web Development." },
+            { "id": "role_backend_developer", "name": "Backend Developer", "description": "Target role Backend Developer dalam family Web Development." },
+            { "id": "role_full_stack_developer", "name": "Full Stack Developer", "description": "Target role Full Stack Developer dalam family Web Development." }
+          ]
+        },
+        {
+          "id": "family_mobile_development",
+          "name": "Mobile Development",
+          "description": "Role yang berhubungan dengan pengembangan aplikasi mobile Android, iOS, dan cross-platform.",
+          "target_roles": [
+            { "id": "role_android_developer", "name": "Android Developer", "description": "Target role Android Developer dalam family Mobile Development." },
+            { "id": "role_ios_developer", "name": "iOS Developer", "description": "Target role iOS Developer dalam family Mobile Development." },
+            { "id": "role_mobile_developer", "name": "Mobile Developer", "description": "Target role Mobile Developer dalam family Mobile Development." }
+          ]
+        },
+        {
+          "id": "family_software_tester",
+          "name": "Software Tester",
+          "description": "Role yang berhubungan dengan manual testing, automation testing, test planning, dan quality assurance.",
+          "target_roles": [
+            { "id": "role_manual_qa_tester", "name": "Manual QA Tester", "description": "Target role Manual QA Tester dalam family Software Tester." },
+            { "id": "role_qa_automation_engineer", "name": "QA Automation Engineer", "description": "Target role QA Automation Engineer dalam family Software Tester." },
+            { "id": "role_software_tester", "name": "Software Tester", "description": "Target role Software Tester dalam family Software Tester." }
+          ]
+        }
+      ]
+    }
+  ]
+}

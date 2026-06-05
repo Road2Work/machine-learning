@@ -1,8 +1,8 @@
-"""
-genai_helper.py — Generative AI Integration (OpenAI GPT-5.4 mini)
+﻿"""
+genai_helper.py â€” Generative AI Integration (OpenAI GPT-5.4 mini)
 Road2Work AI | CC26-PSU050
 
-v2.4.0 — migrated from Gemini to OpenAI Responses API
+OpenAI Responses API digunakan untuk pertanyaan adaptif, evaluasi jawaban, dan feedback.
 - Default GenAI model: gpt-5.4-mini.
 - Natural adaptive question generation with DS guardrail fallback.
 - Clarifying question generation.
@@ -40,7 +40,7 @@ if OpenAI is not None and OPENAI_API_KEY:
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
     except Exception as exc:  # pragma: no cover
-        print(f"[genai_helper] ⚠️ Gagal inisialisasi OpenAI client: {exc}")
+        print(f"[genai_helper] âš ï¸ Gagal inisialisasi OpenAI client: {exc}")
 
 
 EVALUATION_WEIGHTS: dict[str, float] = {
@@ -52,7 +52,7 @@ EVALUATION_WEIGHTS: dict[str, float] = {
     "self_awareness": 0.10,
 }
 
-_ALLOWED_CLARIFICATION_TYPES = {"tools", "impact", "contribution", "specificity", "context", "metric", "structure", "role_relevance", "technical", "clarity", "self_awareness", "professionalism", None, "null"}
+_ALLOWED_CLARIFICATION_TYPES = {"tools", "impact", "contribution", "specificity", "context", "metric", "structure", "role_relevance", "technical", "clarity", "self_awareness", "professionalism", "unclear_audio", "weak_evidence", "missing_tools", "missing_impact", "missing_personal_contribution", "weak_star_structure", "low_role_relevance", "low_self_confidence", "weak_solution_skill", None, "null"}
 
 
 def _call_openai(prompt: str) -> str:
@@ -77,7 +77,7 @@ def _call_openai(prompt: str) -> str:
             if retryable and attempt < MAX_RETRIES - 1:
                 wait = 2 ** attempt
                 print(
-                    f"⚠️ [genai_helper] OpenAI request sibuk/gagal sementara. "
+                    f"âš ï¸ [genai_helper] OpenAI request sibuk/gagal sementara. "
                     f"Retry {attempt + 1}/{MAX_RETRIES} dalam {wait}s..."
                 )
                 time.sleep(wait)
@@ -87,9 +87,6 @@ def _call_openai(prompt: str) -> str:
     return "GENAI_ERROR: Terjadi kesalahan tidak terduga."
 
 
-# Backward-compatible alias agar bagian lama yang memanggil _call_gemini tetap aman.
-def _call_gemini(prompt: str) -> str:  # pragma: no cover
-    return _call_openai(prompt)
 
 
 def _parse_json_response(raw: str, fallback: dict[str, Any]) -> dict[str, Any]:
@@ -133,8 +130,20 @@ def _normalize_score_breakdown(score_breakdown: dict[str, Any] | None, fallback_
     return normalized
 
 
+def _looks_garbled_transcript(answer: str) -> bool:
+    text = (answer or "").lower().strip()
+    words = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", text)
+    if len(words) < 3:
+        return True
+    common = {"saya", "aku", "pernah", "membuat", "menggunakan", "project", "proyek", "magang", "data", "role", "ai", "engineer", "backend", "frontend", "computer", "vision", "dashboard", "sql", "python", "java", "javascript", "model", "aplikasi", "tim", "hasil", "dampak", "belajar", "pengalaman"}
+    known_ratio = sum(1 for word in words if word in common or len(word) <= 3) / max(1, len(words))
+    very_long_unknown = sum(1 for word in words if len(word) > 14)
+    repeated_noise = len(set(words)) <= max(2, len(words) // 4)
+    return (len(words) >= 8 and known_ratio < 0.16) or very_long_unknown >= 2 or repeated_noise
+
+
 def _fallback_evidence_level(answer: str) -> int:
-    """Evidence Ladder heuristic: 1 claim → 5 measurable result."""
+    """Evidence Ladder heuristic: 1 claim â†’ 5 measurable result."""
     text = (answer or "").lower()
     has_skill = bool(re.search(r"\b(python|sql|excel|tableau|power bi|tensorflow|pytorch|fastapi|api|dashboard|model|analisis|data)\b", text))
     has_context = bool(re.search(r"\b(project|proyek|magang|organisasi|freelance|tugas|client|tim|kampus|perusahaan|penjualan|user)\b", text))
@@ -155,6 +164,8 @@ def _fallback_evidence_level(answer: str) -> int:
 
 def _fallback_weakness(score_breakdown: dict[str, int], answer: str) -> list[str]:
     weakness: list[str] = []
+    if _looks_garbled_transcript(answer):
+        return ["unclear_audio"]
     for key, score in score_breakdown.items():
         if score < 60:
             weakness.append(key)
@@ -180,7 +191,7 @@ def _fallback_weakness(score_breakdown: dict[str, int], answer: str) -> list[str
 
 
 def _fallback_clarification_type(weakness: list[str]) -> str | None:
-    priority = ["tools", "impact", "contribution", "specificity"]
+    priority = ["unclear_audio", "missing_tools", "tools", "missing_impact", "impact", "missing_personal_contribution", "contribution", "metric", "specificity"]
     for item in priority:
         if item in weakness or f"evidence_{item}" in weakness:
             return item
@@ -198,7 +209,7 @@ def _safe_list(value: Any, default: list[Any] | None = None) -> list[Any]:
 
 
 # --------------------------------------------------------------------------- #
-# 1. EXISTING HELPER — tetap dipertahankan untuk formalisasi profil
+# 1. EXISTING HELPER â€” tetap dipertahankan untuk formalisasi profil
 # --------------------------------------------------------------------------- #
 def formalize_narrative(raw_narrative: str, role: str = "profesional") -> dict[str, Any]:
     """Ubah narasi/CV menjadi ringkasan profil profesional terstruktur."""
@@ -267,6 +278,7 @@ def generate_natural_question(
     adaptive_memory = interview_state.get("adaptive_memory", {}) or {}
     weakness_history = interview_state.get("weakness_history", []) or []
     practice_mode = interview_state.get("practice_mode") or ("adaptive_from_history" if adaptive_memory.get("enabled") else "first_session")
+    answer_memory = interview_state.get("answer_memory", {}) or {}
 
     raw_competency = competency_map.get(role) or competency_map.get("default") or {}
     if isinstance(raw_competency, dict):
@@ -333,14 +345,24 @@ Adaptive practice memory v2.3:
 - Avoid repeated questions: {adaptive_memory.get("avoid_repeated_questions", True)}
 - Retry mode: {adaptive_memory.get("retry_mode", False)}
 
+Answer memory dari jawaban terakhir:
+- Kutipan jawaban terakhir: {answer_memory.get("transcript_excerpt")}
+- Tools/skill yang disebut: {answer_memory.get("mentioned_tools")}
+- Anchor pengalaman yang bisa di-follow-up: {answer_memory.get("anchor_phrases")}
+- Evidence level jawaban terakhir: {answer_memory.get("evidence_level")}
+- Weakness jawaban terakhir: {answer_memory.get("detected_weaknesses")}
+
 Aturan:
 1. Jangan mengulang pertanyaan yang sudah ada secara sama persis.
-2. Jika practice mode adaptive_from_history, prioritaskan weakness terbesar dan improvement focus.
-3. Jika retry_mode false, jangan mengulang wording pertanyaan lama. Kompetensi boleh sama, wording harus berbeda.
-4. Jangan menanyakan hal yang terlalu jauh dari konteks kandidat.
-5. Dorong kandidat menjawab dengan pengalaman nyata, kontribusi pribadi, tools, dan evidence.
-6. Bahasa Indonesia, profesional, singkat, seperti HRD sungguhan.
-7. Kalau question seed tersedia, gunakan sebagai arah pertanyaan tetapi boleh diparafrase agar natural.
+2. Jika answer memory tersedia, buat follow-up dari detail yang benar-benar disebut kandidat. Contoh: jika kandidat menyebut Looker Studio, tanyakan keputusan, proses, validasi data, dampak, atau metrik dari penggunaan Looker Studio. Jangan pindah topik terlalu cepat.
+3. Jika practice mode adaptive_from_history, prioritaskan weakness terbesar dan improvement focus.
+4. Jika retry_mode false, jangan mengulang wording atau substansi pertanyaan lama. Kompetensi boleh sama, wording harus berbeda.
+5. Jangan menanyakan hal yang terlalu jauh dari konteks kandidat.
+6. Dorong kandidat menjawab dengan Evidence Ladder: skill/tools, konteks project, kontribusi pribadi, impact, lalu metrik jika ada.
+7. Jangan mengulang substansi pertanyaan atau klarifikasi yang sudah ditanyakan, termasuk jika wording berbeda tetapi maksudnya sama.
+8. Kalau pertanyaan sebelumnya sudah meminta tools, jangan lagi bertanya tools; naikkan ke impact/metrik atau kontribusi.
+9. Bahasa Indonesia, profesional, singkat, seperti HRD sungguhan.
+10. Kalau question seed tersedia, gunakan sebagai arah pertanyaan tetapi boleh diparafrase agar natural.
 
 Balas HANYA JSON valid:
 {{
@@ -350,7 +372,7 @@ Balas HANYA JSON valid:
 }}
 """
     raw = _call_openai(prompt)
-    fallback_question = seed_text or _fallback_natural_question(role, skills, target_competency, asked)
+    fallback_question = _fallback_answer_memory_question(role, answer_memory, asked) or seed_text or _fallback_natural_question(role, skills, target_competency, asked)
     fallback = {
         "question": fallback_question,
         "competency_target": target_competency,
@@ -366,6 +388,79 @@ Balas HANYA JSON valid:
         "competency_target": str(parsed.get("competency_target") or target_competency),
         "question_type": "main",
     }
+
+
+def _clean_follow_up_subject(value: str, *, allow_short_tool: bool = False) -> str | None:
+    clean = re.sub(r"\s+", " ", str(value or "").strip(" .,:;!?\"'"))
+    if not clean:
+        return None
+    lower = clean.lower()
+    generic = {
+        "dengan tim", "dalam tim", "sama tim", "ini sama", "ini sama sih", "ini juga",
+        "ini juga sih", "pengalaman tadi", "jawaban tadi", "role", "posisi", "tim",
+        "saya", "aku", "kami", "kita", "harus", "yang", "dan", "atau",
+    }
+    if lower in generic or any(lower.startswith(prefix) for prefix in ("dengan ", "sama ", "yang ", "untuk ")):
+        return None
+    if len(clean) < (2 if allow_short_tool else 6) or len(clean) > 80:
+        return None
+    stop_words = {"yang", "dan", "atau", "dengan", "untuk", "dalam", "pada", "saya", "aku", "kami", "kita", "itu", "ini"}
+    words = re.findall(r"[a-zA-Z0-9.+#-]+", lower)
+    if not allow_short_tool and words:
+        meaningful = [word for word in words if word not in stop_words and len(word) > 2]
+        if len(meaningful) == 0:
+            return None
+    return clean
+
+
+def _is_repeated_question(candidate: str, asked: list[str]) -> bool:
+    candidate_words = set(re.findall(r"[a-zA-Z0-9]+", candidate.lower()))
+    for old in asked:
+        old_words = set(re.findall(r"[a-zA-Z0-9]+", str(old).lower()))
+        similarity = len(candidate_words & old_words) / max(1, len(candidate_words | old_words))
+        if candidate.strip().lower() == str(old).strip().lower() or similarity > 0.74:
+            return True
+    return False
+
+
+def _fallback_answer_memory_question(role: str, answer_memory: dict[str, Any], asked: list[str]) -> str | None:
+    if not answer_memory:
+        return None
+    tools = []
+    for item in answer_memory.get("mentioned_tools", []) or []:
+        subject = _clean_follow_up_subject(str(item), allow_short_tool=True)
+        if subject and subject.lower() not in {tool.lower() for tool in tools}:
+            tools.append(subject)
+
+    anchors = []
+    for item in answer_memory.get("anchor_phrases", []) or []:
+        subject = _clean_follow_up_subject(str(item))
+        if subject and subject.lower() not in {anchor.lower() for anchor in anchors}:
+            anchors.append(subject)
+
+    weaknesses = [str(x).strip() for x in answer_memory.get("detected_weaknesses", []) or [] if str(x).strip()]
+    evidence_level = int(answer_memory.get("evidence_level") or 0)
+    tool_subject = tools[0] if tools else None
+    anchor_subject = anchors[0] if anchors else None
+
+    candidates: list[str] = []
+    if tool_subject:
+        if "missing_impact" in weaknesses or evidence_level >= 3:
+            candidates.append(f"Tadi kamu menyebut {tool_subject}. Dari penggunaan itu, hasil apa yang berubah dan bagaimana kamu mengukurnya?")
+        if "missing_personal_contribution" in weaknesses:
+            candidates.append(f"Saat memakai {tool_subject}, bagian mana yang benar-benar kamu kerjakan sendiri dan keputusan apa yang kamu ambil?")
+        candidates.append(f"Bisa jelaskan satu keputusan penting saat kamu memakai {tool_subject}, lalu dampaknya untuk project atau tim?")
+    if anchor_subject:
+        candidates.append(f"Dari pengalaman tentang {anchor_subject}, bagian mana yang paling menunjukkan kontribusi pribadimu dan hasil akhirnya?")
+        candidates.append(f"Pada pengalaman {anchor_subject}, tantangan utamanya apa, aksi yang kamu ambil apa, dan perubahan apa yang terjadi setelahnya?")
+    if "missing_tools" in weaknesses and not tool_subject:
+        candidates.append("Dari pengalaman tadi, metode atau tools apa yang paling penting, dan kenapa itu kamu pilih?")
+    candidates.append(f"Pilih satu pengalaman paling konkret untuk posisi {role}. Ceritakan konteksnya, kontribusimu, tools yang dipakai, dan hasil yang bisa dibuktikan.")
+
+    for candidate in candidates:
+        if not _is_repeated_question(candidate, asked):
+            return candidate
+    return None
 
 def _fallback_natural_question(role: str, skills: list[str], competency: str, asked: list[str]) -> str:
     skills_text = ", ".join(skills[:4]) if skills else "skill yang kamu punya"
@@ -410,7 +505,7 @@ def generate_interview_questions(
 
 
 # --------------------------------------------------------------------------- #
-# 3. ANSWER EVALUATION — FULL SCHEMA
+# 3. ANSWER EVALUATION â€” FULL SCHEMA
 # --------------------------------------------------------------------------- #
 def evaluate_interview_answer(
     question: str,
@@ -446,12 +541,19 @@ Rubric wajib:
 - communication_clarity bobot 10%
 - self_awareness bobot 10%
 
-Evidence Ladder:
-1 Claim saja
-2 Skill/tools disebut
-3 Ada konteks project/pengalaman
-4 Ada impact/hasil kualitatif
-5 Ada hasil terukur/angka
+Evidence Ladder wajib:
+1 Claim saja: hanya klaim kemampuan.
+2 Skill/tools: menyebut skill atau tools.
+3 Context: menyebut project, organisasi, magang, perusahaan, atau masalah.
+4 Impact: menjelaskan hasil/dampak kualitatif.
+5 Measurable Result: ada angka, metrik, skala, waktu, persen, atau indikator terukur.
+
+Aturan klarifikasi:
+- Jika transkrip terdengar acak/garbled/tidak koheren, jangan nilai sebagai jawaban valid. Set need_clarification=true, clarification_type="unclear_audio", evidence_level=1.
+- Kalau Evidence Level 1-2, klarifikasi harus menggali konteks atau tools.
+- Kalau Evidence Level 3, klarifikasi harus menggali impact atau kontribusi pribadi.
+- Kalau Evidence Level 4, klarifikasi harus menggali measurable result/metrik.
+- Jangan meminta hal yang sudah dijawab kandidat.
 
 Aturan stronger_answer:
 - Jangan mengarang pengalaman, angka, tools, company, atau hasil yang tidak disebut kandidat.
@@ -471,7 +573,7 @@ Balas HANYA JSON valid sesuai schema ini:
   "evidence_level": 1,
   "weakness": ["tag_kelemahan"],
   "need_clarification": true,
-  "clarification_type": "tools|impact|contribution|specificity|null",
+  "clarification_type": "unclear_audio|tools|impact|contribution|specificity|metric|null",
   "feedback": "maksimal 3 kalimat",
   "stronger_answer": "versi jawaban lebih kuat, tanpa mengarang data"
 }}
@@ -530,6 +632,18 @@ def normalize_evaluation_schema(raw: dict[str, Any], original_answer: str = "") 
     weakness = [str(w).strip() for w in _safe_list(raw.get("weakness")) if str(w).strip()]
     if not weakness:
         weakness = _fallback_weakness(score_breakdown, original_answer)
+
+    if _looks_garbled_transcript(original_answer):
+        return {
+            "score_breakdown": _normalize_score_breakdown({}, 20),
+            "final_score": 20,
+            "evidence_level": 1,
+            "weakness": ["unclear_audio"],
+            "need_clarification": True,
+            "clarification_type": "unclear_audio",
+            "feedback": "Jawaban belum terdengar cukup jelas untuk dievaluasi.",
+            "stronger_answer": "Ulangi jawaban dengan satu contoh pengalaman yang jelas: konteksnya apa, kontribusimu apa, tools yang dipakai, dan hasilnya.",
+        }
 
     clarification_type = raw.get("clarification_type")
     if clarification_type == "null":
@@ -601,10 +715,11 @@ def _fallback_feedback(weakness: list[str]) -> str:
 
 def _fallback_stronger_answer(answer: str) -> str:
     if not answer.strip():
-        return "Saya pernah mengerjakan [nama project/pengalaman]. Dalam project itu, tugas saya adalah [kontribusi pribadi], menggunakan [tools/skill], dan hasilnya [impact yang benar-benar terjadi]."
+        return "Saya pernah mengerjakan [nama project/pengalaman]. Konteksnya [situasi singkat], peran saya [kontribusi pribadi], tools yang saya gunakan [tools/skill], dan hasilnya [impact yang benar-benar terjadi]."
+    concise = answer.strip().replace("\n", " ")[:220]
     return (
-        f"Berdasarkan jawabanmu: {answer.strip()[:180]}... "
-        "Agar lebih kuat, tambahkan situasi, tugas spesifikmu, aksi yang kamu lakukan, tools yang digunakan, dan hasil/impact yang benar-benar terjadi."
+        f"{concise}. Untuk membuat jawaban ini naik di Evidence Ladder, jelaskan konteks project, "
+        "kontribusi pribadi, tools/metode yang dipakai, lalu tutup dengan impact atau angka yang benar-benar terjadi."
     )
 
 
@@ -631,8 +746,9 @@ Weakness terdeteksi: {weakness_tags}
 Clarification type: {clarification_type}
 
 Buat 1 pertanyaan klarifikasi yang natural dan singkat.
-Tujuannya menggali detail yang belum jelas, bukan menghakimi.
-Jangan menambahkan asumsi pengalaman baru.
+Tujuannya menggali satu rung Evidence Ladder yang paling hilang, bukan menghakimi.
+Jika audio/transkrip tidak jelas, minta kandidat mengulang jawaban dengan pelan dan konkret.
+Jangan mengulang maksud pertanyaan awal. Jangan menambahkan asumsi pengalaman baru.
 
 Balas HANYA teks pertanyaannya saja.
 """
@@ -645,16 +761,27 @@ Balas HANYA teks pertanyaannya saja.
 def _fallback_clarification_question(clarification_type: str | None, role: str) -> str:
     mapping = {
         "tools": "Bisa kamu jelaskan tools, metode, atau teknologi apa yang kamu gunakan dalam pengalaman itu?",
+        "missing_tools": "Bisa kamu jelaskan tools, metode, atau teknologi apa yang kamu gunakan dalam pengalaman itu?",
         "impact": "Apa hasil atau dampak dari pekerjaan yang kamu lakukan dalam pengalaman tersebut?",
+        "missing_impact": "Apa hasil atau dampak terukur dari pekerjaan yang kamu lakukan dalam pengalaman tersebut?",
         "contribution": "Bagian mana yang benar-benar kamu kerjakan sendiri, dan apa tanggung jawab utamamu?",
+        "missing_personal_contribution": "Bagian mana yang benar-benar kamu kerjakan sendiri, dan apa tanggung jawab utamamu?",
         "specificity": "Bisa kamu ceritakan contoh yang lebih spesifik dari pengalaman itu?",
+        "weak_evidence": "Bisa kamu ceritakan contoh yang lebih spesifik, termasuk konteks, aksi, dan bukti hasilnya?",
         "context": "Bisa jelaskan konteks proyek atau masalah yang sedang kamu hadapi saat itu?",
-        "metric": "Apakah ada angka, metrik, atau indikator yang menunjukkan keberhasilan pekerjaanmu?",
+        "metric": "Apa hasil terukurnya? Kamu bisa sebutkan angka, waktu, skala data, akurasi, atau indikator lain yang benar-benar terjadi.",
         "structure": "Bisa ceritakan ulang secara runtut dari situasi, tugasmu, aksi yang kamu lakukan, sampai hasilnya?",
+        "weak_star_structure": "Bisa kamu ceritakan ulang secara runtut dari situasi, tugasmu, aksi yang kamu lakukan, sampai hasilnya?",
         "role_relevance": f"Bagaimana pengalaman itu berhubungan langsung dengan posisi {role} yang kamu targetkan?",
+        "low_role_relevance": f"Bagaimana pengalaman itu berhubungan langsung dengan posisi {role} yang kamu targetkan?",
         "technical": "Bisa jelaskan detail teknis atau pendekatan yang kamu gunakan?",
+        "technical_accuracy": "Bisa jelaskan detail teknis, pendekatan, atau alasan pilihan solusi yang kamu gunakan?",
         "clarity": "Bisa jelaskan ulang dengan lebih terstruktur dan singkat?",
+        "communication_clarity": "Bisa jelaskan ulang dengan lebih terstruktur dan singkat?",
         "self_awareness": "Apa pembelajaran atau hal yang akan kamu perbaiki dari pengalaman tersebut?",
+        "low_self_confidence": "Apa bagian dari pengalaman itu yang paling kamu kuasai, dan apa yang masih ingin kamu tingkatkan?",
+        "weak_solution_skill": "Bisa jelaskan langkah yang kamu ambil untuk menyelesaikan masalah dan alasan di balik keputusanmu?",
+        "unclear_audio": "Maaf, jawabanmu belum tertangkap jelas. Bisa ulangi dengan lebih pelan, lalu ceritakan satu contoh pengalaman yang paling relevan?",
     }
     return mapping.get(
         clarification_type,
@@ -704,6 +831,8 @@ Aturan:
 - Strengths harus berdasarkan score tertinggi/evidence yang muncul.
 - Improvement areas harus berdasarkan score terendah/weakness.
 - Before-after memakai jawaban user asli dan versi yang lebih kuat tanpa data palsu.
+- Buat before-after untuk setiap jawaban utama yang punya transcript, maksimal 5 item.
+- Gunakan Evidence Ladder: Level 1 claim, Level 2 skill/tools, Level 3 context, Level 4 impact, Level 5 measurable result.
 - Next practice recommendation mapping dari kelemahan terbesar.
 
 Balas HANYA JSON valid:
@@ -714,12 +843,16 @@ Balas HANYA JSON valid:
   "improvement_areas": [
     {{"title": "...", "cause": "...", "suggestion": "..."}}
   ],
-  "before_after_answer_improvement": {{
-    "before": "jawaban awal user",
-    "problem": "masalah utama",
-    "after": "versi lebih kuat tanpa mengarang data",
-    "why_better": "alasan singkat"
-  }},
+  "before_after_answer_improvement": [
+    {{
+      "question_text": "pertanyaan yang dijawab",
+      "before": "jawaban awal user",
+      "problem": "masalah utama berdasarkan Evidence Ladder",
+      "after": "versi lebih kuat tanpa mengarang data",
+      "why_better": "alasan singkat kenapa lebih kuat",
+      "evidence_ladder_note": "Level jawaban saat ini dan cara naik level"
+    }}
+  ],
   "next_practice_recommendation": {{
     "practice_type": "Behavioral STAR Practice|Evidence Booster Practice|Technical Interview Practice|Answer Clarity Practice|Role Understanding Practice",
     "reason": "...",
@@ -741,7 +874,9 @@ def normalize_dashboard_schema(raw: dict[str, Any], fallback: dict[str, Any]) ->
     strengths = _safe_list(raw.get("strengths"), fallback["strengths"])[:3]
     improvement_areas = _safe_list(raw.get("improvement_areas"), fallback["improvement_areas"])[:3]
     before_after = raw.get("before_after_answer_improvement")
-    if not isinstance(before_after, dict):
+    if isinstance(before_after, dict):
+        before_after = [before_after]
+    elif not isinstance(before_after, list):
         before_after = fallback["before_after_answer_improvement"]
     next_practice = raw.get("next_practice_recommendation")
     if not isinstance(next_practice, dict):
@@ -753,6 +888,45 @@ def normalize_dashboard_schema(raw: dict[str, Any], fallback: dict[str, Any]) ->
         "before_after_answer_improvement": before_after,
         "next_practice_recommendation": next_practice,
     }
+
+
+def _fallback_before_after_items(answers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for idx, answer in enumerate(answers[:5], start=1):
+        transcript = str(answer.get("transcript") or "").strip()
+        if not transcript:
+            continue
+        evaluation = answer.get("evaluation", {}) or {}
+        breakdown = evaluation.get("score_breakdown") or {}
+        lowest = "evidence_specificity"
+        if isinstance(breakdown, dict) and breakdown:
+            lowest = min(breakdown.items(), key=lambda item: _clamp_score(item[1]))[0]
+        problem_map = {
+            "star_structure": "Struktur jawaban belum runtut dari konteks, aksi, sampai hasil.",
+            "evidence_specificity": "Bukti pengalaman masih perlu dibuat lebih spesifik.",
+            "technical_accuracy": "Penjelasan teknis masih perlu diperjelas agar lebih kredibel.",
+            "communication_clarity": "Alur cerita masih bisa dibuat lebih ringkas dan mudah diikuti.",
+            "role_relevance": "Hubungan pengalaman dengan role target belum cukup terlihat.",
+            "self_awareness": "Refleksi kekuatan dan area belajar masih perlu dipertegas.",
+        }
+        items.append({
+            "question_text": answer.get("question_text") or answer.get("question") or f"Jawaban {idx}",
+            "before": transcript[:700],
+            "problem": problem_map.get(lowest, "Jawaban masih perlu dibuat lebih terstruktur dan berbasis evidence."),
+            "after": evaluation.get("stronger_answer") or _fallback_stronger_answer(transcript),
+            "why_better": "Versi ini lebih kuat karena menghubungkan konteks, kontribusi pribadi, tools/metode, dan hasil.",
+            "evidence_ladder_note": "Naikkan jawaban minimal ke Level 4 dengan impact; jika punya angka, arahkan ke Level 5 measurable result.",
+            "improvement_notes": ["Perjelas konteks", "Tunjukkan kontribusi pribadi", "Tambahkan impact atau hasil terukur"],
+        })
+    return items or [{
+        "question_text": "Jawaban interview",
+        "before": "Belum ada jawaban utama yang bisa dibandingkan.",
+        "problem": "Data jawaban belum cukup untuk membuat perbaikan spesifik.",
+        "after": _fallback_stronger_answer(""),
+        "why_better": "Format ini membantu user menjawab dengan konteks, kontribusi, tools, dan hasil.",
+        "evidence_ladder_note": "Targetkan Level 4-5 Evidence Ladder.",
+        "improvement_notes": ["Tambahkan pengalaman konkret", "Sebutkan kontribusi pribadi", "Tutup dengan hasil"],
+    }]
 
 
 def _fallback_dashboard(role: str, answers: list[dict[str, Any]], final_score: int) -> dict[str, Any]:
@@ -803,12 +977,7 @@ def _fallback_dashboard(role: str, answers: list[dict[str, Any]], final_score: i
             }
             for key, _ in low_components
         ],
-        "before_after_answer_improvement": {
-            "before": transcript[:500] if transcript else "Belum ada jawaban utama yang bisa dibandingkan.",
-            "problem": "Jawaban masih perlu dibuat lebih terstruktur dan berbasis evidence.",
-            "after": _fallback_stronger_answer(transcript),
-            "why_better": "Versi after lebih jelas karena mengarahkan jawaban ke Situation, Task, Action, Result, dan evidence.",
-        },
+        "before_after_answer_improvement": _fallback_before_after_items(main_answers),
         "next_practice_recommendation": {
             "practice_type": practice_map.get(lowest, "Evidence Booster Practice"),
             "reason": f"Komponen terendah saat ini adalah {lowest.replace('_', ' ')}.",
@@ -816,3 +985,12 @@ def _fallback_dashboard(role: str, answers: list[dict[str, Any]], final_score: i
             "cta": "Ulangi latihan dengan satu pengalaman yang lebih spesifik.",
         },
     }
+
+
+
+
+
+
+
+
+

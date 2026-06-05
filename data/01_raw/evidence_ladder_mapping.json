@@ -1,0 +1,34 @@
+{
+  "levels": [
+    {
+      "level": 1,
+      "name": "Claim",
+      "description": "Hanya klaim kemampuan atau tugas tanpa menyebutkan tools atau konteks spesifik.",
+      "example": "Saya bisa membuat dashboard."
+    },
+    {
+      "level": 2,
+      "name": "Skill",
+      "description": "Menyebutkan skill atau tools yang digunakan, tetapi belum ada konteks proyek yang jelas.",
+      "example": "Saya menggunakan Excel dan Python."
+    },
+    {
+      "level": 3,
+      "name": "Context",
+      "description": "Menjelaskan penggunaan tools di dalam konteks proyek, masalah, atau pekerjaan spesifik.",
+      "example": "Saya membuat dashboard untuk menganalisis data penjualan bulanan."
+    },
+    {
+      "level": 4,
+      "name": "Impact",
+      "description": "Menjelaskan kontribusi dan dampak positif dari hasil pekerjaan tersebut.",
+      "example": "Dashboard tersebut membantu tim marketing memahami tren performa produk."
+    },
+    {
+      "level": 5,
+      "name": "Measurable Result",
+      "description": "Menyertakan hasil terukur secara kuantitatif atau metrik keberhasilan yang nyata.",
+      "example": "Waktu pembuatan laporan rutin berkurang drastis dari 2 jam menjadi hanya 30 menit."
+    }
+  ]
+}

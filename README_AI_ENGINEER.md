@@ -1,4 +1,4 @@
-# Road2Work.id — AI Engineer Service
+﻿# Road2Work.id â€” AI Engineer Service
 
 AI Engineer service untuk **Road2Work.id**, AI Career Readiness Platform yang menangani:
 
@@ -12,7 +12,7 @@ AI Engineer service untuk **Road2Work.id**, AI Career Readiness Platform yang me
 - Career readiness result / dashboard summary
 - Adaptive interview antar session berdasarkan practice memory
 
-Service ini dibangun menggunakan **FastAPI**, **TensorFlow**, **Google Gemini / GenAI**, **faster-whisper**, **Docker**, dan **DockerHub**.
+Service ini dibangun menggunakan **FastAPI**, **TensorFlow**, **OpenAI Responses API / GenAI**, **faster-whisper**, **Docker**, dan **DockerHub**.
 
 ---
 
@@ -26,7 +26,7 @@ Service ini dibangun menggunakan **FastAPI**, **TensorFlow**, **Google Gemini / 
 | Custom Component | Custom Layer, Custom Callback |
 | Custom Training Loop | `tf.GradientTape` |
 | Model Monitoring | TensorBoard |
-| Generative AI | Google Gemini API |
+| Generative AI | OpenAI Responses API |
 | Speech-to-Text | faster-whisper |
 | NLP Utility | NLTK, Sastrawi, regex-based extraction |
 | Dataset / Asset Loader | JSON / CSV dari repo `data-science` |
@@ -41,50 +41,50 @@ Struktur repo **machine-learning**:
 
 ```txt
 machine-learning/
-├── main.py
-├── model_builder.py
-├── genai_helper.py
-├── ds_assets.py
-├── nlp_utils.py
-├── stt_utils.py
-├── readiness_engine.py
-├── requirements.txt
-├── .env.example
-├── notebook.ipynb
-├── Dockerfile
-├── docker-compose.yml
-├── docker-compose.dockerhub.yml
-├── .dockerignore
-├── scripts/
-│   ├── smoke_test_contract.py
-│   ├── train_answer_quality_model.py
-│   ├── train_answer_quality_custom_loop.py
-│   ├── evaluate_split_datasets.py
-│   ├── update_ds_resources.sh
-│   └── update_ds_resources.ps1
-├── models/
-│   ├── answer_quality_model.keras
-│   ├── answer_quality_tokenizer.json
-│   ├── answer_quality_meta.json
-│   └── logs/
-└── data_science_resources/
-    └── data/
-        ├── 01_raw/
-        │   ├── answer_dataset.csv
-        │   ├── role_tree_dropdown.json
-        │   ├── role_skill_matrix.json
-        │   ├── skill_taxonomy.json
-        │   ├── competency_map.json
-        │   ├── question_seed.json
-        │   ├── weakness_taxonomy.json
-        │   ├── scoring_rubric.json
-        │   └── evidence_ladder_mapping.json
-        ├── 02_interim/
-        ├── 03_processed/
-        │   ├── train_df.csv
-        │   ├── val_df.csv
-        │   └── test_df.csv
-        └── 99_archive/
+â”œâ”€â”€ main.py
+â”œâ”€â”€ model_builder.py
+â”œâ”€â”€ genai_helper.py
+â”œâ”€â”€ ds_assets.py
+â”œâ”€â”€ nlp_utils.py
+â”œâ”€â”€ stt_utils.py
+â”œâ”€â”€ readiness_engine.py
+â”œâ”€â”€ requirements.txt
+â”œâ”€â”€ .env.example
+â”œâ”€â”€ notebook.ipynb
+â”œâ”€â”€ Dockerfile
+â”œâ”€â”€ docker-compose.yml
+â”œâ”€â”€ docker-compose.dockerhub.yml
+â”œâ”€â”€ .dockerignore
+â”œâ”€â”€ scripts/
+â”‚   â”œâ”€â”€ smoke_test_contract.py
+â”‚   â”œâ”€â”€ train_answer_quality_model.py
+â”‚   â”œâ”€â”€ train_answer_quality_custom_loop.py
+â”‚   â”œâ”€â”€ evaluate_split_datasets.py
+â”‚   â”œâ”€â”€ update_ds_resources.sh
+â”‚   â””â”€â”€ update_ds_resources.ps1
+â”œâ”€â”€ models/
+â”‚   â”œâ”€â”€ answer_quality_model.keras
+â”‚   â”œâ”€â”€ answer_quality_tokenizer.json
+â”‚   â”œâ”€â”€ answer_quality_meta.json
+â”‚   â””â”€â”€ logs/
+â””â”€â”€ data_science_resources/
+    â””â”€â”€ data/
+        â”œâ”€â”€ 01_raw/
+        â”‚   â”œâ”€â”€ answer_dataset.csv
+        â”‚   â”œâ”€â”€ role_tree_dropdown.json
+        â”‚   â”œâ”€â”€ role_skill_matrix.json
+        â”‚   â”œâ”€â”€ skill_taxonomy.json
+        â”‚   â”œâ”€â”€ competency_map.json
+        â”‚   â”œâ”€â”€ question_seed.json
+        â”‚   â”œâ”€â”€ weakness_taxonomy.json
+        â”‚   â”œâ”€â”€ scoring_rubric.json
+        â”‚   â””â”€â”€ evidence_ladder_mapping.json
+        â”œâ”€â”€ 02_interim/
+        â”œâ”€â”€ 03_processed/
+        â”‚   â”œâ”€â”€ train_df.csv
+        â”‚   â”œâ”€â”€ val_df.csv
+        â”‚   â””â”€â”€ test_df.csv
+        â””â”€â”€ 99_archive/
 ```
 
 > Catatan penting: dataset utama model **tidak lagi dibaca dari root `data_science_resources/`**, tetapi dari `data_science_resources/data/03_processed/`.
@@ -155,14 +155,14 @@ File yang digunakan sebagai guardrail AI:
 | File | Fungsi |
 |---|---|
 | `answer_dataset.csv` | Dataset mentah sebelum split |
-| `role_tree_dropdown.json` | Data dropdown Domain → Role Family → Target Role |
+| `role_tree_dropdown.json` | Data dropdown Domain â†’ Role Family â†’ Target Role |
 | `role_skill_matrix.json` | Matrix role dan skill |
 | `skill_taxonomy.json` | Normalisasi skill dan tools |
 | `competency_map.json` | Competency per role |
 | `question_seed.json` | Seed pertanyaan interview |
 | `weakness_taxonomy.json` | Weakness dan clarification mapping |
 | `scoring_rubric.json` | Bobot scoring answer evaluation |
-| `evidence_ladder_mapping.json` | Definisi Evidence Ladder level 1–5 |
+| `evidence_ladder_mapping.json` | Definisi Evidence Ladder level 1â€“5 |
 
 ---
 
@@ -209,8 +209,8 @@ cp .env.example .env
 Isi minimal `.env` untuk local development:
 
 ```env
-GEMINI_API_KEY=isi_api_key_kamu
-GEMINI_MODEL=gemini-2.5-flash
+OPENAI_API_KEY=isi_api_key_kamu
+OPENAI_MODEL=gpt-5.4-mini
 
 DS_RESOURCES_DIR=./data_science_resources
 DS_RAW_DIR=./data_science_resources/data/01_raw
@@ -302,7 +302,7 @@ Model yang digunakan adalah **Answer Quality Model** dengan dua output:
 | Output | Fungsi |
 |---|---|
 | `answer_quality` | Klasifikasi `Weak`, `Average`, `Strong` |
-| `readiness_score` | Skor numerik 0.0–1.0 untuk MAE |
+| `readiness_score` | Skor numerik 0.0â€“1.0 untuk MAE |
 
 ### Training biasa dengan `model.fit()`
 
@@ -499,8 +499,8 @@ Folder log:
 
 ```txt
 models/logs/
-├── gradient_tape/
-└── model_fit/
+â”œâ”€â”€ gradient_tape/
+â””â”€â”€ model_fit/
 ```
 
 Jika TensorBoard tidak terbuka di VS Code notebook, jalankan lewat terminal dan buka manual di browser.
@@ -816,12 +816,12 @@ curl http://localhost:8000/v1/admin/ds-assets/status
 
 ---
 
-### 22.5 Gemini API error
+### 22.5 OpenAI API error
 
 Pastikan `.env` berisi:
 
 ```env
-GEMINI_API_KEY=isi_api_key_kamu
+OPENAI_API_KEY=isi_api_key_kamu
 ```
 
 Jika API key kosong, service tetap bisa berjalan dengan fallback, tetapi hasil question/feedback tidak sebaik GenAI asli.
@@ -919,9 +919,9 @@ Frontend tidak memanggil FastAPI secara langsung. Alur integrasi:
 
 ```txt
 Next.js Frontend
-↓
+â†“
 Express.js Backend API Gateway
-↓
+â†“
 FastAPI AI Service
 ```
 
@@ -975,3 +975,4 @@ git submodule update --remote --merge data_science_resources
 ```txt
 http://localhost:8000/docs
 ```
+

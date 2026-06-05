@@ -1,0 +1,503 @@
+{
+  "Data Analyst": {
+    "required_skills": [
+      {
+        "skill": "sql",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "excel",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "tableau",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "power bi",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "google looker studio",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "pandas",
+        "importance": "low",
+        "weight": 0.10
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Data & AI"
+  },
+  "Data Scientist": {
+    "required_skills": [
+      {
+        "skill": "python",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "scikit-learn",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "machine learning",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "statistical analysis",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "sql",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Data & AI"
+  },
+  "AI Engineer": {
+    "required_skills": [
+      {
+        "skill": "python",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "tensorflow",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "pytorch",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "natural language processing",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "computer vision",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Data & AI"
+  },
+  "ML Engineer": {
+    "required_skills": [
+      {
+        "skill": "python",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "mlops",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "docker",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "scikit-learn",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "ci/cd",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Data & AI"
+  },
+  "Cloud Engineer": {
+    "required_skills": [
+      {
+        "skill": "aws",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "cloud deployment",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "docker",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "kubernetes",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "networking",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Infrastructure, Cloud & Security"
+  },
+  "DevOps Engineer": {
+    "required_skills": [
+      {
+        "skill": "continuous integration",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "docker",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "kubernetes",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "terraform",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "jenkins",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Infrastructure, Cloud & Security"
+  },
+  "Cybersecurity Analyst": {
+    "required_skills": [
+      {
+        "skill": "siem",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "network security",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "vulnerability assessment",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "penetration testing",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "incident response",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Infrastructure, Cloud & Security"
+  },
+  "Frontend Developer": {
+    "required_skills": [
+      {
+        "skill": "javascript",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "react",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "next.js",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "tailwind css",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "html",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Web Development"
+  },
+  "Backend Developer": {
+    "required_skills": [
+      {
+        "skill": "node.js",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "postgresql",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "rest api",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "golang",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "express.js",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Web Development"
+  },
+  "Full Stack Developer": {
+    "required_skills": [
+      {
+        "skill": "react",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "node.js",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "sql",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "javascript",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "git",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Web Development"
+  },
+  "Android Developer": {
+    "required_skills": [
+      {
+        "skill": "kotlin",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "android sdk",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "jetpack compose",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "mvvm architecture",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "android studio",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Mobile Development"
+  },
+  "iOS Developer": {
+    "required_skills": [
+      {
+        "skill": "swift",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "xcode",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "swiftui",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "combine framework",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "core data",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Mobile Development"
+  },
+  "Mobile Developer": {
+    "required_skills": [
+      {
+        "skill": "flutter",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "react native",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "dart",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "javascript",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "state management",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Mobile Development"
+  },
+  "Manual QA Tester": {
+    "required_skills": [
+      {
+        "skill": "test case design",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "bug tracking",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "black box testing",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "postman",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "jira",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Software Tester"
+  },
+  "QA Automation Engineer": {
+    "required_skills": [
+      {
+        "skill": "selenium",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "cypress",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "test automation",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "python",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "javascript basics",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Software Tester"
+  },
+  "Software Tester": {
+    "required_skills": [
+      {
+        "skill": "software testing",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "performance testing",
+        "importance": "high",
+        "weight": 0.25
+      },
+      {
+        "skill": "quality assurance procedures",
+        "importance": "high",
+        "weight": 0.20
+      },
+      {
+        "skill": "api testing",
+        "importance": "medium",
+        "weight": 0.15
+      },
+      {
+        "skill": "test automation",
+        "importance": "medium",
+        "weight": 0.15
+      }
+    ],
+    "domain": "Information & Technology",
+    "role_family": "Software Tester"
+  }
+}
